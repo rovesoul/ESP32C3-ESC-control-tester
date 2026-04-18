@@ -1,0 +1,9 @@
+menu "Example Configuration"
+
+    config EXAMPLE_MQTT_BROKER_URI
+        string "MQTT broker URI"
+        default "mqtt://rovesoul.synology.me:1883"
+        help
+            URI to the MQTT broker.
+
+endmenu
