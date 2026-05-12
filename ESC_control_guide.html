@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESC 控制协议速览：PWM / OneShot / MultiShot / DShot</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #20242a;
+      --muted: #69717d;
+      --line: #d9dee7;
+      --blue: #2563eb;
+      --green: #0f9f6e;
+      --amber: #c47a16;
+      --red: #d14d45;
+      --purple: #7257d9;
+      --shadow: 0 10px 28px rgba(31, 41, 55, 0.10);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.62;
+    }
+
+    header {
+      min-height: 74vh;
+      display: grid;
+      align-items: center;
+      color: #ffffff;
+      background:
+        linear-gradient(rgba(12, 18, 28, 0.72), rgba(12, 18, 28, 0.48)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1400 900'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23131f2f'/%3E%3Cstop offset='0.45' stop-color='%2326373b'/%3E%3Cstop offset='1' stop-color='%235b3f2d'/%3E%3C/linearGradient%3E%3Cfilter id='s'%3E%3CfeDropShadow dx='0' dy='18' stdDeviation='22' flood-opacity='.35'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='1400' height='900' fill='url(%23g)'/%3E%3Cg opacity='.28'%3E%3Cpath d='M0 700 C260 590 380 780 610 650 S980 510 1400 630 L1400 900 L0 900 Z' fill='%230b1119'/%3E%3Cpath d='M0 170 C230 120 420 210 650 170 S1040 90 1400 150' stroke='%23ffffff' stroke-width='2' fill='none'/%3E%3Cpath d='M0 210 C220 180 430 265 650 222 S1040 140 1400 198' stroke='%23ffffff' stroke-width='1.4' fill='none'/%3E%3C/g%3E%3Cg filter='url(%23s)' transform='translate(440 260)'%3E%3Ccircle cx='260' cy='190' r='92' fill='%232d3238'/%3E%3Ccircle cx='260' cy='190' r='42' fill='%2310151b'/%3E%3Cg fill='%23d5dde8'%3E%3Cpath d='M260 178 C330 70 430 44 497 98 C421 120 350 165 278 199 Z'/%3E%3Cpath d='M271 197 C404 204 484 267 489 354 C425 310 345 284 248 207 Z'/%3E%3Cpath d='M251 203 C181 314 81 337 15 282 C90 260 161 217 240 181 Z'/%3E%3Cpath d='M246 184 C112 178 30 115 27 28 C91 72 174 98 274 176 Z'/%3E%3C/g%3E%3Cpath d='M-90 460 L620 460' stroke='%232ea66f' stroke-width='8' stroke-linecap='round'/%3E%3Cpath d='M-90 492 L620 492' stroke='%232563eb' stroke-width='8' stroke-linecap='round'/%3E%3Cpath d='M-90 524 L620 524' stroke='%23d14d45' stroke-width='8' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: cover;
+      background-position: center;
+    }
+
+    .hero-inner,
+    main {
+      width: min(1120px, calc(100% - 36px));
+      margin: 0 auto;
+    }
+
+    .hero-inner {
+      padding: 82px 0 56px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 5px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: #e9edf5;
+      font-size: 13px;
+    }
+
+    h1 {
+      max-width: 780px;
+      margin: 22px 0 18px;
+      font-size: clamp(38px, 6vw, 72px);
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 760px;
+      margin: 0;
+      color: #eef2f7;
+      font-size: clamp(17px, 2.2vw, 22px);
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+
+    nav .nav-inner {
+      width: min(1120px, calc(100% - 36px));
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+
+    nav a {
+      flex: 0 0 auto;
+      color: #394150;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 7px 10px;
+      border-radius: 6px;
+    }
+
+    nav a:hover {
+      background: #e9eef7;
+      color: var(--blue);
+    }
+
+    main {
+      padding: 34px 0 72px;
+    }
+
+    section {
+      margin: 34px 0;
+      padding: 28px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 28px;
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 22px 0 8px;
+      font-size: 20px;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+    }
+
+    .span-7 {
+      grid-column: span 7;
+    }
+
+    .span-5 {
+      grid-column: span 5;
+    }
+
+    .span-6 {
+      grid-column: span 6;
+    }
+
+    .note {
+      border-left: 4px solid var(--amber);
+      padding: 12px 14px;
+      background: #fff8ec;
+      border-radius: 0 6px 6px 0;
+      color: #573b14;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+
+    th {
+      background: #edf2f8;
+      color: #273142;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #edf1f7;
+      color: #1f3d66;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    .visual-panel {
+      min-height: 240px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f9fbfe;
+      padding: 18px;
+      overflow: hidden;
+    }
+
+    .motor-visual {
+      position: relative;
+      height: 300px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, #edf4fb, #ffffff);
+    }
+
+    .motor {
+      position: relative;
+      width: 176px;
+      height: 176px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #101721 0 22%, #2d3540 23% 55%, #111827 56% 100%);
+      box-shadow: inset 0 0 0 10px #465161, 0 18px 42px rgba(15, 23, 42, 0.24);
+    }
+
+    .prop {
+      position: absolute;
+      inset: -56px;
+      animation: spin 2.2s linear infinite;
+    }
+
+    .blade {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 54px;
+      height: 150px;
+      margin-left: -27px;
+      margin-top: -150px;
+      border-radius: 70% 70% 48% 48%;
+      background: linear-gradient(90deg, #dde7f2, #aebdcc);
+      transform-origin: 50% 150px;
+      opacity: 0.9;
+    }
+
+    .blade:nth-child(2) { transform: rotate(90deg); }
+    .blade:nth-child(3) { transform: rotate(180deg); }
+    .blade:nth-child(4) { transform: rotate(270deg); }
+
+    .wire {
+      position: absolute;
+      bottom: 34px;
+      left: calc(50% - 175px);
+      width: 350px;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--green) 0 33%, var(--blue) 33% 66%, var(--red) 66%);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .pulse-track {
+      position: relative;
+      height: 96px;
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background:
+        linear-gradient(#e1e6ef 1px, transparent 1px) 0 0 / 100% 32px,
+        linear-gradient(90deg, #e1e6ef 1px, transparent 1px) 0 0 / 52px 100%,
+        #ffffff;
+      overflow: hidden;
+    }
+
+    .pwm-pulse,
+    .dshot-pulse {
+      position: absolute;
+      left: -120px;
+      top: 36px;
+      height: 28px;
+      background: var(--blue);
+      animation: pulseSweep 3s linear infinite;
+      box-shadow:
+        26px 0 0 var(--blue),
+        52px 0 0 var(--blue),
+        78px 0 0 var(--blue);
+    }
+
+    .pwm-pulse {
+      width: 42px;
+    }
+
+    .dshot-pulse {
+      width: 18px;
+      background: var(--green);
+      box-shadow:
+        24px 0 0 var(--green),
+        39px 0 0 var(--green),
+        63px 0 0 var(--green),
+        78px 0 0 var(--green),
+        102px 0 0 var(--green),
+        117px 0 0 var(--green);
+      animation-duration: 1.45s;
+    }
+
+    @keyframes pulseSweep {
+      to { transform: translateX(820px); }
+    }
+
+    .demo {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .controls {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fbfcff;
+    }
+
+    .control-row {
+      margin: 0 0 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    select,
+    input[type="range"] {
+      width: 100%;
+    }
+
+    select {
+      appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #ffffff;
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    input[type="range"] {
+      accent-color: var(--blue);
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .metric {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    canvas {
+      width: 100%;
+      min-height: 260px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      display: block;
+    }
+
+    .diagram {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0 0;
+    }
+
+    .tag {
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      padding: 4px 9px;
+      background: #ffffff;
+      color: #465063;
+      font-size: 13px;
+    }
+
+    .source-list a {
+      color: var(--blue);
+    }
+
+    footer {
+      width: min(1120px, calc(100% - 36px));
+      margin: 0 auto 40px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 860px) {
+      header {
+        min-height: 68vh;
+      }
+
+      section {
+        padding: 20px;
+      }
+
+      .span-7,
+      .span-5,
+      .span-6 {
+        grid-column: 1 / -1;
+      }
+
+      .demo {
+        grid-template-columns: 1fr;
+      }
+
+      .readout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      .prop,
+      .pwm-pulse,
+      .dshot-pulse {
+        animation-play-state: paused;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hero-inner">
+      <div class="eyebrow">ESP32-C3 ESC 学习文档</div>
+      <h1>ESC 控制协议速览</h1>
+      <p class="lead">从普通 PWM 到 DShot：理解电调收到的到底是什么信号，以及后续如何把当前 MQTT 执行器改成真正的电机控制器。</p>
+    </div>
+  </header>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="#overview">总览</a>
+      <a href="#pwm">PWM</a>
+      <a href="#dshot">DShot</a>
+      <a href="#demo">交互演示</a>
+      <a href="#esp32">ESP32-C3 实现</a>
+      <a href="#safety">安全</a>
+      <a href="#sources">资料来源</a>
+    </div>
+  </nav>
+
+  <main>
+    <section id="overview">
+      <div class="grid">
+        <div class="span-7">
+          <h2>这类项目到底在控制什么</h2>
+          <p>ESC 是 Electronic Speed Controller，中文通常叫“电调”。飞控或单片机并不直接驱动无刷电机三相绕组，而是把“油门意图”发给 ESC，由 ESC 完成换相、闭环或开环驱动、保护和启动逻辑。</p>
+          <p>对当前项目来说，MQTT 只是远程命令入口；真正要扩展的是输出端：把现在的 <code>GPIO2</code> 闪烁，替换成 ESC 可识别的控制信号。</p>
+          <div class="tag-list">
+            <span class="tag">PWM：兼容性最好</span>
+            <span class="tag">DShot：数字、免校准</span>
+            <span class="tag">RMT：适合精确脉冲</span>
+            <span class="tag">LEDC：适合普通 PWM</span>
+          </div>
+        </div>
+        <div class="span-5">
+          <div class="visual-panel motor-visual" aria-label="无刷电机示意动画">
+            <div class="motor">
+              <div class="prop">
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="blade"></div>
+                <div class="blade"></div>
+              </div>
+            </div>
+            <div class="wire"></div>
+          </div>
+        </div>
+      </div>
+
+      <h3>协议对比</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>协议</th>
+            <th>类型</th>
+            <th>典型含义</th>
+            <th>工程判断</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>PWM / Servo PWM</td>
+            <td>模拟脉宽</td>
+            <td>常见 <code>1000us</code> 最低油门，<code>2000us</code> 满油门，周期常见 <code>20ms</code>。</td>
+            <td>最适合第一版验证。简单、兼容，但常需要油门行程校准。</td>
+          </tr>
+          <tr>
+            <td>OneShot / OneShot125</td>
+            <td>模拟脉宽</td>
+            <td>比传统 PWM 更短、更快，历史上用于降低飞控到 ESC 的延迟。</td>
+            <td>现在新项目通常直接考虑 DShot。</td>
+          </tr>
+          <tr>
+            <td>MultiShot</td>
+            <td>模拟脉宽</td>
+            <td>更短的高低电平脉宽，非常快。</td>
+            <td>对时序要求高，生态热度已不如 DShot。</td>
+          </tr>
+          <tr>
+            <td>DShot150/300/600/1200</td>
+            <td>数字脉冲编码</td>
+            <td>16 bit 帧：11 bit 油门、1 bit 遥测请求、4 bit CRC。</td>
+            <td>现代无人机 ESC 常用。无需校准，有校验，适合用 ESP32 RMT 实现。</td>
+          </tr>
+          <tr>
+            <td>CAN / DroneCAN</td>
+            <td>总线</td>
+            <td>通过 CAN 总线发速度、状态和遥测。</td>
+            <td>更适合复杂载具或长线抗干扰场景，硬件和协议栈更重。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="pwm">
+      <div class="grid">
+        <div class="span-6">
+          <h2>PWM：先把电调转起来</h2>
+          <p>普通 ESC PWM 类似舵机信号：周期固定，每个周期中高电平持续时间代表油门。常见范围是 <code>1000us</code> 到 <code>2000us</code>，但不同 ESC 可能支持 <code>1100us-1900us</code> 或更宽范围。</p>
+          <p>ESP32-C3 上可以用 LEDC 生成。对于第一版固件，建议先输出 <code>50Hz</code>，起始油门保持 <code>1000us</code>，再通过 MQTT payload 改变目标油门。</p>
+          <div class="note">很多模拟 PWM ESC 需要做油门行程校准。DShot 的一个重要优势就是不需要这一步。</div>
+        </div>
+        <div class="span-6">
+          <div class="visual-panel">
+            <strong>PWM 波形动画</strong>
+            <div class="pulse-track">
+              <div class="pwm-pulse"></div>
+            </div>
+            <p>蓝色短脉冲代表每个周期的高电平。油门越大，高电平越宽。</p>
+          </div>
+        </div>
+      </div>
+
+      <svg class="diagram" viewBox="0 0 900 230" role="img" aria-label="PWM 脉宽示意图">
+        <rect x="1" y="1" width="898" height="228" rx="8" fill="#fbfcff" stroke="#d9dee7"/>
+        <line x1="70" y1="170" x2="830" y2="170" stroke="#8792a2" stroke-width="2"/>
+        <path d="M90 170 L90 70 L150 70 L150 170 L260 170 L260 70 L350 70 L350 170 L470 170 L470 70 L590 70 L590 170 L780 170" fill="none" stroke="#2563eb" stroke-width="5" stroke-linejoin="round"/>
+        <text x="88" y="45" font-size="18" fill="#20242a">1000us：低油门</text>
+        <text x="250" y="45" font-size="18" fill="#20242a">1500us：中间</text>
+        <text x="466" y="45" font-size="18" fill="#20242a">2000us：高油门</text>
+        <text x="710" y="196" font-size="15" fill="#69717d">周期常见 20ms / 50Hz</text>
+      </svg>
+    </section>
+
+    <section id="dshot">
+      <div class="grid">
+        <div class="span-6">
+          <h2>DShot：数字 ESC 协议</h2>
+          <p>DShot 不再靠“一个周期里的总脉宽”表达油门，而是发送一串固定长度 bit。每个 bit 的总时间固定，<code>1</code> 和 <code>0</code> 通过高电平占比区分。</p>
+          <p>标准 DShot 帧是 <code>16 bit</code>：<code>11 bit throttle</code>、<code>1 bit telemetry request</code>、<code>4 bit CRC</code>。油门值 <code>48-2047</code> 是有效油门区间，<code>1-47</code> 是特殊命令，<code>0</code> 通常表示停止或 disarm。</p>
+        </div>
+        <div class="span-6">
+          <div class="visual-panel">
+            <strong>DShot bit 流动画</strong>
+            <div class="pulse-track">
+              <div class="dshot-pulse"></div>
+            </div>
+            <p>绿色脉冲表示连续 bit。高电平时间长一点是 <code>1</code>，短一点是 <code>0</code>。</p>
+          </div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>DShot 档位</th>
+            <th>bit 时间</th>
+            <th>16 bit 帧时间</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>DShot150</td>
+            <td>约 <code>6.67us</code></td>
+            <td>约 <code>106.7us</code></td>
+            <td>速度低，容错相对宽。</td>
+          </tr>
+          <tr>
+            <td>DShot300</td>
+            <td>约 <code>3.33us</code></td>
+            <td>约 <code>53.3us</code></td>
+            <td>常见折中选择。</td>
+          </tr>
+          <tr>
+            <td>DShot600</td>
+            <td>约 <code>1.67us</code></td>
+            <td>约 <code>26.7us</code></td>
+            <td>穿越机常见。</td>
+          </tr>
+          <tr>
+            <td>DShot1200</td>
+            <td>约 <code>0.83us</code></td>
+            <td>约 <code>13.3us</code></td>
+            <td>对硬件和时序要求更高。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="demo">
+      <h2>交互演示：油门如何变成信号</h2>
+      <div class="demo">
+        <div class="controls">
+          <div class="control-row">
+            <label for="protocol">协议</label>
+            <select id="protocol">
+              <option value="pwm">PWM 50Hz</option>
+              <option value="oneshot125">OneShot125</option>
+              <option value="multishot">MultiShot</option>
+              <option value="dshot150">DShot150</option>
+              <option value="dshot300">DShot300</option>
+              <option value="dshot600">DShot600</option>
+            </select>
+          </div>
+          <div class="control-row">
+            <label for="throttle">油门：<span id="throttleLabel">20</span>%</label>
+            <input id="throttle" type="range" min="0" max="100" value="20">
+          </div>
+          <div class="readout">
+            <div class="metric">
+              <strong>PWM 脉宽</strong>
+              <span id="pulseWidth">1200us</span>
+            </div>
+            <div class="metric">
+              <strong>DShot 值</strong>
+              <span id="dshotValue">448</span>
+            </div>
+            <div class="metric">
+              <strong>帧/周期</strong>
+              <span id="periodValue">20ms</span>
+            </div>
+            <div class="metric">
+              <strong>建议外设</strong>
+              <span id="peripheralValue">LEDC</span>
+            </div>
+          </div>
+        </div>
+        <canvas id="wave" width="1100" height="360" aria-label="协议波形演示"></canvas>
+      </div>
+    </section>
+
+    <section id="esp32">
+      <h2>放到这个 ESP32-C3 项目里的路线</h2>
+      <div class="grid">
+        <div class="span-6">
+          <h3>第一阶段：PWM 版</h3>
+          <p>新增 <code>esc_pwm.c/.h</code>，用 LEDC 输出固定频率 PWM。MQTT 收到 payload 后解析成百分比或微秒值，例如 <code>0-100</code> 映射到 <code>1000-2000us</code>。</p>
+          <p>这一步最适合快速验证：接线、地线共地、ESC 供电、最低油门、MQTT 控制链路。</p>
+        </div>
+        <div class="span-6">
+          <h3>第二阶段：DShot 版</h3>
+          <p>新增 <code>esc_dshot.c/.h</code>，用 RMT 发送 16 bit 脉冲序列。RMT 的核心优势是能描述“某个电平持续多少 tick”，正好匹配 DShot 的数字脉冲编码。</p>
+          <p>等 PWM 链路跑通后，再把输出层抽象成 <code>esc_set_throttle(percent)</code>，底层可以在 PWM 和 DShot 间切换。</p>
+        </div>
+      </div>
+
+      <svg class="diagram" viewBox="0 0 980 260" role="img" aria-label="项目控制链路图">
+        <rect x="1" y="1" width="978" height="258" rx="8" fill="#fbfcff" stroke="#d9dee7"/>
+        <g font-size="17" fill="#20242a" text-anchor="middle">
+          <rect x="55" y="80" width="160" height="76" rx="8" fill="#eaf2ff" stroke="#2563eb"/>
+          <text x="135" y="112">MQTT</text>
+          <text x="135" y="138" font-size="13" fill="#69717d">topic: agent</text>
+          <rect x="290" y="80" width="170" height="76" rx="8" fill="#eef9f4" stroke="#0f9f6e"/>
+          <text x="375" y="112">ESP32-C3</text>
+          <text x="375" y="138" font-size="13" fill="#69717d">解析油门命令</text>
+          <rect x="535" y="80" width="170" height="76" rx="8" fill="#fff5e8" stroke="#c47a16"/>
+          <text x="620" y="112">PWM / DShot</text>
+          <text x="620" y="138" font-size="13" fill="#69717d">GPIO 输出</text>
+          <rect x="780" y="80" width="145" height="76" rx="8" fill="#fff0ef" stroke="#d14d45"/>
+          <text x="852" y="112">ESC</text>
+          <text x="852" y="138" font-size="13" fill="#69717d">驱动无刷电机</text>
+        </g>
+        <g stroke="#69717d" stroke-width="3" fill="none" marker-end="url(#arrow)">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#69717d"/>
+            </marker>
+          </defs>
+          <path d="M215 118 L288 118"/>
+          <path d="M460 118 L533 118"/>
+          <path d="M705 118 L778 118"/>
+        </g>
+      </svg>
+    </section>
+
+    <section id="safety">
+      <h2>调试安全清单</h2>
+      <p class="note">任何 ESC 固件测试、协议切换、油门校准、MQTT 远程控制测试，都先拆桨。不要相信“只是低油门试一下”。</p>
+      <table>
+        <thead>
+          <tr>
+            <th>事项</th>
+            <th>原因</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ESP32 GND 与 ESC 信号 GND 共地</td>
+            <td>没有共同参考地，PWM/DShot 信号可能无法被正确识别。</td>
+          </tr>
+          <tr>
+            <td>先输出最低油门再给 ESC 上电</td>
+            <td>很多 ESC 会在上电时读取当前油门状态。</td>
+          </tr>
+          <tr>
+            <td>限制 MQTT 命令范围</td>
+            <td>远程输入要做限幅、超时和默认停机，避免异常 payload 直接满油门。</td>
+          </tr>
+          <tr>
+            <td>给电机控制加 watchdog 或失联停机</td>
+            <td>如果 MQTT 断开或程序异常，ESC 输出应回到安全状态。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="sources">
+      <h2>资料来源</h2>
+      <p>下面是这份速览主要参考的资料。文档没有照搬原文，只提取和工程实现相关的信息。</p>
+      <ul class="source-list">
+        <li><a href="https://ardupilot.org/plane/docs/common-brushless-escs.html">ArduPilot: PWM, OneShot and OneShot125 ESCs</a></li>
+        <li><a href="https://ardupilot.org/copter/docs/common-dshot-escs.html">ArduPilot: DShot ESCs</a></li>
+        <li><a href="https://docs.px4.io/main/en/peripherals/dshot.html">PX4: DShot ESCs</a></li>
+        <li><a href="https://betaflight.com/docs/development/API/Dshot">Betaflight: DShot protocol</a></li>
+        <li><a href="https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/peripherals/ledc.html">Espressif ESP-IDF: LEDC PWM</a></li>
+        <li><a href="https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/api-reference/peripherals/rmt.html">Espressif ESP-IDF: RMT peripheral</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>保存位置：项目根目录 <code>ESC_control_guide.html</code>。后续实现固件时，可以把这页当作协议和实现路线备忘。</p>
+  </footer>
+
+  <script>
+    const protocolEl = document.getElementById("protocol");
+    const throttleEl = document.getElementById("throttle");
+    const throttleLabel = document.getElementById("throttleLabel");
+    const pulseWidthEl = document.getElementById("pulseWidth");
+    const dshotValueEl = document.getElementById("dshotValue");
+    const periodValueEl = document.getElementById("periodValue");
+    const peripheralValueEl = document.getElementById("peripheralValue");
+    const canvas = document.getElementById("wave");
+    const ctx = canvas.getContext("2d");
+
+    const protocolInfo = {
+      pwm: { label: "PWM 50Hz", period: "20ms", peripheral: "LEDC", digital: false },
+      oneshot125: { label: "OneShot125", period: "约 125-250us", peripheral: "RMT/LEDC", digital: false },
+      multishot: { label: "MultiShot", period: "约 5-25us", peripheral: "RMT", digital: false },
+      dshot150: { label: "DShot150", period: "约 106.7us/帧", peripheral: "RMT", digital: true, bitUs: 6.67 },
+      dshot300: { label: "DShot300", period: "约 53.3us/帧", peripheral: "RMT", digital: true, bitUs: 3.33 },
+      dshot600: { label: "DShot600", period: "约 26.7us/帧", peripheral: "RMT", digital: true, bitUs: 1.67 }
+    };
+
+    function dshotCrc(value) {
+      let csum = 0;
+      let data = value;
+      for (let i = 0; i < 3; i++) {
+        csum ^= data;
+        data >>= 4;
+      }
+      return csum & 0xF;
+    }
+
+    function makeDshotFrame(throttlePercent) {
+      const throttle = throttlePercent === 0 ? 0 : Math.round(48 + throttlePercent / 100 * (2047 - 48));
+      const packetWithoutCrc = throttle << 1;
+      const packet = (packetWithoutCrc << 4) | dshotCrc(packetWithoutCrc);
+      return { throttle, packet };
+    }
+
+    function drawGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "#e3e8f0";
+      ctx.lineWidth = 1;
+
+      for (let x = 60; x < canvas.width - 40; x += 60) {
+        ctx.beginPath();
+        ctx.moveTo(x, 40);
+        ctx.lineTo(x, 300);
+        ctx.stroke();
+      }
+
+      for (let y = 80; y <= 260; y += 60) {
+        ctx.beginPath();
+        ctx.moveTo(50, y);
+        ctx.lineTo(canvas.width - 40, y);
+        ctx.stroke();
+      }
+    }
+
+    function drawAnalogPulse(protocol, throttlePercent) {
+      const baseline = 240;
+      const high = 100;
+      const startX = 90;
+      const endX = canvas.width - 80;
+      const pulseWidthUs = Math.round(1000 + throttlePercent * 10);
+      let visualWidth = 70 + throttlePercent * 2.6;
+
+      if (protocol === "oneshot125") {
+        visualWidth = 42 + throttlePercent * 1.3;
+      } else if (protocol === "multishot") {
+        visualWidth = 24 + throttlePercent * 0.58;
+      }
+
+      ctx.strokeStyle = "#2563eb";
+      ctx.lineWidth = 7;
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(startX, baseline);
+      ctx.lineTo(startX, high);
+      ctx.lineTo(startX + visualWidth, high);
+      ctx.lineTo(startX + visualWidth, baseline);
+      ctx.lineTo(endX, baseline);
+      ctx.stroke();
+
+      ctx.fillStyle = "#20242a";
+      ctx.font = "22px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+      ctx.fillText(`${protocolInfo[protocol].label}：高电平越宽，油门越大`, 70, 44);
+      ctx.font = "16px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+      ctx.fillStyle = "#69717d";
+      ctx.fillText(`当前 PWM 映射：${pulseWidthUs}us`, 70, 322);
+    }
+
+    function drawDshot(protocol, throttlePercent) {
+      const { throttle, packet } = makeDshotFrame(throttlePercent);
+      const bits = packet.toString(2).padStart(16, "0");
+      const baseY = 240;
+      const highY = 95;
+      const startX = 70;
+      const bitW = 56;
+      const oneHigh = 38;
+      const zeroHigh = 22;
+
+      ctx.strokeStyle = "#0f9f6e";
+      ctx.lineWidth = 5;
+      ctx.lineJoin = "round";
+      let x = startX;
+
+      for (const bit of bits) {
+        const highWidth = bit === "1" ? oneHigh : zeroHigh;
+        ctx.beginPath();
+        ctx.moveTo(x, baseY);
+        ctx.lineTo(x, highY);
+        ctx.lineTo(x + highWidth, highY);
+        ctx.lineTo(x + highWidth, baseY);
+        ctx.lineTo(x + bitW, baseY);
+        ctx.stroke();
+
+        ctx.fillStyle = bit === "1" ? "#0f9f6e" : "#69717d";
+        ctx.font = "14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+        ctx.fillText(bit, x + 20, 276);
+        x += bitW;
+      }
+
+      ctx.fillStyle = "#20242a";
+      ctx.font = "22px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+      ctx.fillText(`${protocolInfo[protocol].label}：16 bit 数字帧`, 70, 44);
+      ctx.font = "16px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+      ctx.fillStyle = "#69717d";
+      ctx.fillText(`Throttle=${throttle}，Packet=0b${bits}`, 70, 322);
+    }
+
+    function update() {
+      const protocol = protocolEl.value;
+      const throttlePercent = Number(throttleEl.value);
+      const info = protocolInfo[protocol];
+      const pwmUs = Math.round(1000 + throttlePercent * 10);
+      const dshot = makeDshotFrame(throttlePercent);
+
+      throttleLabel.textContent = throttlePercent;
+      pulseWidthEl.textContent = `${pwmUs}us`;
+      dshotValueEl.textContent = dshot.throttle;
+      periodValueEl.textContent = info.period;
+      peripheralValueEl.textContent = info.peripheral;
+
+      drawGrid();
+      if (info.digital) {
+        drawDshot(protocol, throttlePercent);
+      } else {
+        drawAnalogPulse(protocol, throttlePercent);
+      }
+    }
+
+    protocolEl.addEventListener("change", update);
+    throttleEl.addEventListener("input", update);
+    update();
+  </script>
+</body>
+</html>
