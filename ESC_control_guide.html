@@ -569,7 +569,7 @@
         <div class="span-6">
           <h2>PWM：先把电调转起来</h2>
           <p>普通 ESC PWM 类似舵机信号：周期固定，每个周期中高电平持续时间代表油门。常见范围是 <code>1000us</code> 到 <code>2000us</code>，但不同 ESC 可能支持 <code>1100us-1900us</code> 或更宽范围。</p>
-          <p>ESP32-C3 上可以用 LEDC 生成。当前第一版固件支持在网页里设置 <code>50-1000Hz</code> 频率和占空比，并实时显示对应的高电平脉宽。</p>
+          <p>ESP32-C3 上可以用 LEDC 生成 PWM，也可以用 RMT 生成 DShot。当前固件支持在网页里设置 <code>50-1000Hz</code> PWM 频率，也支持 DShot150/300/600/1200 数字油门输出。</p>
           <div class="note">很多模拟 PWM ESC 需要做油门行程校准。DShot 的一个重要优势就是不需要这一步。</div>
         </div>
         <div class="span-6">
@@ -697,7 +697,7 @@
       <div class="grid">
         <div class="span-6">
           <h3>第一阶段：PWM 版</h3>
-          <p>新增 <code>esc_pwm.c/.h</code>，用 LEDC 输出 PWM。网页把频率和占空比保存到 NVS，解锁后输出对应 PWM。</p>
+          <p>新增 <code>esc_pwm.c/.h</code>，PWM 用 LEDC 输出，DShot 用 RMT 输出。网页把协议、频率和占空比保存到 NVS，解锁后输出对应 ESC 信号。</p>
           <p>这一步最适合快速验证：接线、地线共地、ESC 供电、最低油门和网页控制链路。</p>
         </div>
         <div class="span-6">
