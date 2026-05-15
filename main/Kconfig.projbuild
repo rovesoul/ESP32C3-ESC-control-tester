@@ -1,9 +1,9 @@
-menu "Example Configuration"
+menu "ESC Tester Configuration"
 
-    config EXAMPLE_MQTT_BROKER_URI
-        string "MQTT broker URI"
-        default "mqtt://rovesoul.synology.me:1883"
+    config ESC_TESTER_RESERVED
+        bool "Reserved"
+        default n
         help
-            URI to the MQTT broker.
+            Placeholder for future ESC tester configuration items.
 
 endmenu

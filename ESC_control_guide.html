@@ -474,7 +474,7 @@
     <div class="hero-inner">
       <div class="eyebrow">ESP32-C3 ESC 学习文档</div>
       <h1>ESC 控制协议速览</h1>
-      <p class="lead">从普通 PWM 到 DShot：理解电调收到的到底是什么信号，以及后续如何把当前 MQTT 执行器改成真正的电机控制器。</p>
+      <p class="lead">从普通 PWM 到 DShot：理解电调收到的到底是什么信号，以及如何把 ESP32-C3 做成一个网页化 ESC 测试器。</p>
     </div>
   </header>
 
@@ -496,7 +496,7 @@
         <div class="span-7">
           <h2>这类项目到底在控制什么</h2>
           <p>ESC 是 Electronic Speed Controller，中文通常叫“电调”。飞控或单片机并不直接驱动无刷电机三相绕组，而是把“油门意图”发给 ESC，由 ESC 完成换相、闭环或开环驱动、保护和启动逻辑。</p>
-          <p>对当前项目来说，MQTT 只是远程命令入口；真正要扩展的是输出端：把现在的 <code>GPIO2</code> 闪烁，替换成 ESC 可识别的控制信号。</p>
+          <p>对当前项目来说，核心是配网后的本地网页控制台：在浏览器里选择驱动形式、输出 GPIO、频率和占空比，再由 ESP32-C3 输出 ESC 可识别的控制信号。</p>
           <div class="tag-list">
             <span class="tag">PWM：兼容性最好</span>
             <span class="tag">DShot：数字、免校准</span>
@@ -569,7 +569,7 @@
         <div class="span-6">
           <h2>PWM：先把电调转起来</h2>
           <p>普通 ESC PWM 类似舵机信号：周期固定，每个周期中高电平持续时间代表油门。常见范围是 <code>1000us</code> 到 <code>2000us</code>，但不同 ESC 可能支持 <code>1100us-1900us</code> 或更宽范围。</p>
-          <p>ESP32-C3 上可以用 LEDC 生成。对于第一版固件，建议先输出 <code>50Hz</code>，起始油门保持 <code>1000us</code>，再通过 MQTT payload 改变目标油门。</p>
+          <p>ESP32-C3 上可以用 LEDC 生成。当前第一版固件支持在网页里设置 <code>50-1000Hz</code> 频率和占空比，并实时显示对应的高电平脉宽。</p>
           <div class="note">很多模拟 PWM ESC 需要做油门行程校准。DShot 的一个重要优势就是不需要这一步。</div>
         </div>
         <div class="span-6">
@@ -697,8 +697,8 @@
       <div class="grid">
         <div class="span-6">
           <h3>第一阶段：PWM 版</h3>
-          <p>新增 <code>esc_pwm.c/.h</code>，用 LEDC 输出固定频率 PWM。MQTT 收到 payload 后解析成百分比或微秒值，例如 <code>0-100</code> 映射到 <code>1000-2000us</code>。</p>
-          <p>这一步最适合快速验证：接线、地线共地、ESC 供电、最低油门、MQTT 控制链路。</p>
+          <p>新增 <code>esc_pwm.c/.h</code>，用 LEDC 输出 PWM。网页把频率和占空比保存到 NVS，解锁后输出对应 PWM。</p>
+          <p>这一步最适合快速验证：接线、地线共地、ESC 供电、最低油门和网页控制链路。</p>
         </div>
         <div class="span-6">
           <h3>第二阶段：DShot 版</h3>
@@ -711,8 +711,8 @@
         <rect x="1" y="1" width="978" height="258" rx="8" fill="#fbfcff" stroke="#d9dee7"/>
         <g font-size="17" fill="#20242a" text-anchor="middle">
           <rect x="55" y="80" width="160" height="76" rx="8" fill="#eaf2ff" stroke="#2563eb"/>
-          <text x="135" y="112">MQTT</text>
-          <text x="135" y="138" font-size="13" fill="#69717d">topic: agent</text>
+          <text x="135" y="112">Web 控制台</text>
+          <text x="135" y="138" font-size="13" fill="#69717d">频率 / 占空比</text>
           <rect x="290" y="80" width="170" height="76" rx="8" fill="#eef9f4" stroke="#0f9f6e"/>
           <text x="375" y="112">ESP32-C3</text>
           <text x="375" y="138" font-size="13" fill="#69717d">解析油门命令</text>
@@ -738,7 +738,7 @@
 
     <section id="safety">
       <h2>调试安全清单</h2>
-      <p class="note">任何 ESC 固件测试、协议切换、油门校准、MQTT 远程控制测试，都先拆桨。不要相信“只是低油门试一下”。</p>
+      <p class="note">任何 ESC 固件测试、协议切换、油门校准、网页解锁输出测试，都先拆桨。不要相信“只是低油门试一下”。</p>
       <table>
         <thead>
           <tr>
@@ -756,12 +756,12 @@
             <td>很多 ESC 会在上电时读取当前油门状态。</td>
           </tr>
           <tr>
-            <td>限制 MQTT 命令范围</td>
-            <td>远程输入要做限幅、超时和默认停机，避免异常 payload 直接满油门。</td>
+            <td>限制网页输入范围</td>
+            <td>输入要做限幅、锁定和默认停机，避免错误参数直接输出危险油门。</td>
           </tr>
           <tr>
             <td>给电机控制加 watchdog 或失联停机</td>
-            <td>如果 MQTT 断开或程序异常，ESC 输出应回到安全状态。</td>
+            <td>如果网页失联或程序异常，ESC 输出应回到安全状态。</td>
           </tr>
         </tbody>
       </table>

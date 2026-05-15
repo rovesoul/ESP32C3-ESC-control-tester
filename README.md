@@ -1,78 +1,64 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | -------- | -------- | -------- |
+# ESP32-C3 ESC Tester
 
-# ESP-MQTT sample application
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+这个项目用于验证 ESP32-C3 是否可以驱动电调（ESC）。当前版本保留 WiFi 配网和 NVS 保存，移除了 MQTT 示例逻辑，配网后通过网页控制台调试 ESC 输出。
 
-This example connects to the broker URI selected using `idf.py menuconfig` (using mqtt tcp transport) and as a demonstration subscribes/unsubscribes and send a message on certain topic.
-(Please note that the public broker is maintained by the community so may not be always available, for details please see this [disclaimer](https://iot.eclipse.org/getting-started/#sandboxes))
+## 当前功能
 
-Note: If the URI equals `FROM_STDIN` then the broker address is read from stdin upon application startup (used for testing)
+- 首次启动无 WiFi 配置时，开启 `ESP32-Setup` 热点，密码 `12345678`。
+- 手机或电脑连接热点后访问 `http://192.168.4.1` 完成 WiFi 配网。
+- 配网成功后设备重启，连接路由器，并启动 ESC 控制网页。
+- 网页支持选择输出 GPIO、PWM 频率、PWM 占空比。
+- 滑块/输入框会实时应用到 PWM 输出；点击“保存设置”才写入 NVS。
+- 输出解锁状态不保存，重启后默认锁定。
+- 当前只实现 PWM / Servo PWM，DShot150/300/600/1200 作为后续功能预留。
+- 长按 Boot 按键，也就是 `GPIO9`，5 秒会清除 WiFi 配置并重启进入配网模式。
 
-It uses ESP-MQTT library which implements mqtt client to connect to mqtt broker with MQTT version 5.
+## PWM 默认值
 
-The more details about MQTT v5, please refer to [official website](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html)
+- 默认 GPIO：`GPIO3`
+- 频率范围：`50Hz` 到 `1000Hz`
+- 默认频率：`50Hz`
+- 默认占空比：`5.0%`
+- 默认输出状态：锁定，输出 `0%`
 
-## How to use example
+在 `50Hz` 下：
 
-### Hardware Required
+- `5.0%` 对应约 `1000us`
+- `7.5%` 对应约 `1500us`
+- `10.0%` 对应约 `2000us`
 
-This example can be executed on any ESP32 board, the only required interface is WiFi and connection to internet.
+## GPIO 建议
 
-### Configure the project
+ESP32-C3 常见可用数字脚包括 `GPIO0-10`、`GPIO18-21`。本项目网页允许选择：
 
-* Open the project configuration menu (`idf.py menuconfig`)
-* Configure Wi-Fi or Ethernet under "Example Connection Configuration" menu. See "Establishing Wi-Fi or Ethernet Connection" section in [examples/protocols/README.md](../../README.md) for more details.
-* MQTT v5 protocol (`CONFIG_MQTT_PROTOCOL_5`) under "ESP-MQTT Configurations" menu is enabled by `sdkconfig.defaults`.
+`GPIO0/1/2/3/4/5/6/7/10/18/19/20/21`
 
-### Build and Flash
+结合 XIAO ESP32-C3 引脚图，建议优先试 `GPIO3` 或 `GPIO4`。其次可以用 `GPIO5/6/7/10`。
 
-Build the project and flash it to the board, then run monitor tool to view serial output:
+注意：
 
+- `GPIO2` 是 A2，也能输出 PWM；但它是 ESP32-C3 启动相关的特殊脚之一，接 ESC 时不如 `GPIO3/4` 安心。
+- `GPIO8` 是板载 LED/SDA，当前也用于 WiFi 连接后的呼吸灯。
+- `GPIO9` 是 SCL/Boot，当前用于长按清除 WiFi 配置。
+- `GPIO20/21` 是串口 RX/TX，调试日志可能会占用。
+
+## 安全提醒
+
+测试 ESC 前先拆桨。网页默认锁定输出，点击“解锁输出”后才会按当前参数输出 PWM。STOP 会立即锁定输出。
+
+ESC 信号线接所选 GPIO，ESC 信号 GND 必须与 ESP32-C3 GND 共地。电机主电源由 ESC/电源系统供给，不要从 ESP32-C3 给电机供电。
+
+调速时可以先点击“解锁输出”，再拖动占空比滑块。滑块拖动不会频繁写 flash，只有点击“保存设置”才会把当前 GPIO、频率、占空比保存到 NVS。
+
+## 构建
+
+```bash
+source /Users/donghuibiao/ESPIDF/idfv6/v6.0/esp-idf/export.sh
+IDF_COMPONENT_MANAGER=0 idf.py build
 ```
-idf.py -p PORT flash monitor
-```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+当前项目不依赖外部托管组件。这里显式关闭组件管理器，是为了避开本机 ESP-IDF Python 环境里 `pydantic_core` 架构不匹配的问题。
 
-See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
-
-## Example Output
-
-```
-I (5119) esp_netif_handlers: example_connect: sta ip: 192.168.3.143, mask: 255.255.255.0, gw: 192.168.3.1
-I (5119) example_connect: Got IPv4 event: Interface "example_connect: sta" address: 192.168.3.143
-I (5619) example_connect: Got IPv6 event: Interface "example_connect: sta" address: fe80:0000:0000:0000:c64f:33ff:fe24:6645, type: ESP_IP6_ADDR_IS_LINK_LOCAL
-I (5619) example_connect: Connected to example_connect: sta
-I (5629) example_connect: - IPv4 address: 192.168.3.143
-I (5629) example_connect: - IPv6 address: fe80:0000:0000:0000:c64f:33ff:fe24:6645, type: ESP_IP6_ADDR_IS_LINK_LOCAL
-I (5649) MQTT5_EXAMPLE: Other event id:7
-W (6299) wifi:<ba-add>idx:0 (ifx:0, 34:29:12:43:c5:40), tid:7, ssn:0, winSize:64
-I (7439) MQTT5_EXAMPLE: MQTT_EVENT_CONNECTED
-I (7439) MQTT5_EXAMPLE: sent publish successful, msg_id=53118
-I (7439) MQTT5_EXAMPLE: sent subscribe successful, msg_id=41391
-I (7439) MQTT5_EXAMPLE: sent subscribe successful, msg_id=13695
-I (7449) MQTT5_EXAMPLE: sent unsubscribe successful, msg_id=55594
-I (7649) mqtt5_client: MQTT_MSG_TYPE_PUBACK return code is -1
-I (7649) MQTT5_EXAMPLE: MQTT_EVENT_PUBLISHED, msg_id=53118
-I (8039) mqtt5_client: MQTT_MSG_TYPE_SUBACK return code is 0
-I (8049) MQTT5_EXAMPLE: MQTT_EVENT_SUBSCRIBED, msg_id=41391
-I (8049) MQTT5_EXAMPLE: sent publish successful, msg_id=0
-I (8059) mqtt5_client: MQTT_MSG_TYPE_SUBACK return code is 2
-I (8059) MQTT5_EXAMPLE: MQTT_EVENT_SUBSCRIBED, msg_id=13695
-I (8069) MQTT5_EXAMPLE: sent publish successful, msg_id=0
-I (8079) MQTT5_EXAMPLE: MQTT_EVENT_DATA
-I (8079) MQTT5_EXAMPLE: key is board, value is esp32
-I (8079) MQTT5_EXAMPLE: key is u, value is user
-I (8089) MQTT5_EXAMPLE: key is p, value is password
-I (8089) MQTT5_EXAMPLE: payload_format_indicator is 1
-I (8099) MQTT5_EXAMPLE: response_topic is /topic/test/response
-I (8109) MQTT5_EXAMPLE: correlation_data is 123456
-I (8109) MQTT5_EXAMPLE: content_type is 
-I (8119) MQTT5_EXAMPLE: TOPIC=/topic/qos1
-I (8119) MQTT5_EXAMPLE: DATA=data_3
-I (8129) mqtt5_client: MQTT_MSG_TYPE_UNSUBACK return code is 0
-I (8129) MQTT5_EXAMPLE: MQTT_EVENT_UNSUBSCRIBED, msg_id=55594
-I (8139) mqtt_client: Client asked to disconnect
-I (9159) MQTT5_EXAMPLE: MQTT_EVENT_DISCONNECTED
+```bash
+IDF_COMPONENT_MANAGER=0 idf.py -p PORT flash monitor
 ```
