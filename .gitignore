@@ -44,6 +44,10 @@ managed_components/
 # If ESP-IDF tools are installed/referenced locally to the project
 .espressif/
 
+# 固件
+固件包*
+
+
 # CMake generated files
 CMakeCache.txt
 CMakeFiles/
