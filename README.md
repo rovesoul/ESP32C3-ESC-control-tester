@@ -2,10 +2,8 @@
 
 ESP32-C3 web-based ESC tester for PWM, pulse-width, and DShot brushless motor control.
 
-这个项目用于验证 ESP32-C3 是否可以驱动电调（ESC）。当前版本保留 WiFi 配网和 NVS 保存，移除了 MQTT 示例逻辑，配网后通过网页控制台调试 ESC 输出。
+这个项目用于验证 ESP32-C3 是否可以驱动电调（ESC）。当前版本保留 WiFi 配网和 NVS 保存，配网后通过网页控制台调试 ESC 输出。
 
-- GitHub: <https://github.com/rovesoul>
-- Bilibili: <https://space.bilibili.com/185878223>
 
 ## 当前功能
 
@@ -18,7 +16,6 @@ ESP32-C3 web-based ESC tester for PWM, pulse-width, and DShot brushless motor co
 - 支持 PWM / Servo PWM 和 DShot150/300/600/1200。DShot 通过 RMT 连续发送数字油门帧。
 - 脉宽控制模式仍使用普通 PWM 输出，但网页滑杆直接设置高电平脉宽，固件按当前频率自动换算占空比。
 - 切换 PWM / 脉宽控制 / DShot 协议时，网页会自动执行 STOP，停止输出，并把油门滑杆回到最左侧。
-- 网页内置 `favicon.svg` 作为浏览器标签图标和页头 logo，并提供 GitHub / Bilibili 入口链接。
 - 长按 Boot 按键，也就是 `GPIO9`，5 秒会清除 WiFi 配置并重启进入配网模式。
 
 ## PWM 默认值
@@ -85,3 +82,5 @@ IDF_COMPONENT_MANAGER=0 idf.py build
 ```bash
 IDF_COMPONENT_MANAGER=0 idf.py -p PORT flash monitor
 ```
+
+烧录内容，从右侧 Releases 找到版本下载后，阅读 txt 说明
