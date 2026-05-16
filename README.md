@@ -1,6 +1,11 @@
 # ESP32-C3 ESC Tester
 
+ESP32-C3 web-based ESC tester for PWM, pulse-width, and DShot brushless motor control.
+
 这个项目用于验证 ESP32-C3 是否可以驱动电调（ESC）。当前版本保留 WiFi 配网和 NVS 保存，移除了 MQTT 示例逻辑，配网后通过网页控制台调试 ESC 输出。
+
+- GitHub: <https://github.com/rovesoul>
+- Bilibili: <https://space.bilibili.com/185878223>
 
 ## 当前功能
 
@@ -12,6 +17,8 @@
 - 输出解锁状态不保存，重启后默认锁定。
 - 支持 PWM / Servo PWM 和 DShot150/300/600/1200。DShot 通过 RMT 连续发送数字油门帧。
 - 脉宽控制模式仍使用普通 PWM 输出，但网页滑杆直接设置高电平脉宽，固件按当前频率自动换算占空比。
+- 切换 PWM / 脉宽控制 / DShot 协议时，网页会自动执行 STOP，锁定输出，并把油门滑杆回到最左侧。
+- 网页内置 `favicon.svg` 作为浏览器标签图标和页头 logo，并提供 GitHub / Bilibili 入口链接。
 - 长按 Boot 按键，也就是 `GPIO9`，5 秒会清除 WiFi 配置并重启进入配网模式。
 
 ## PWM 默认值
@@ -63,10 +70,13 @@ ESC 信号线接所选 GPIO，ESC 信号 GND 必须与 ESP32-C3 GND 共地。电
 
 调速时可以先点击“解锁输出”，再拖动占空比滑块。滑块拖动不会频繁写 flash，只有点击“保存设置”才会把当前协议、GPIO、频率、占空比保存到 NVS。
 
+切换协议会自动 STOP 并锁定输出。重新选择协议后，需要确认滑杆位置，再点击“解锁输出”。
+
 ## 构建
 
 ```bash
 source /Users/donghuibiao/ESPIDF/idfv6/v6.0/esp-idf/export.sh
+IDF_COMPONENT_MANAGER=0 idf.py set-target esp32c3
 IDF_COMPONENT_MANAGER=0 idf.py build
 ```
 

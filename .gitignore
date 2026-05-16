@@ -23,13 +23,15 @@ build_verify/
 *.o
 *.a
 *.out
-*.exe # For any host-side utilities compiled on Windows
+# Host-side utilities compiled on Windows
+*.exe
 
 # ESP-IDF specific build outputs
 *.bin
 *.elf
 *.map
-flasher_args.json # Generated in build directory
+# Generated in build directory
+flasher_args.json
 sdkconfig.old
 sdkconfig
 
@@ -74,6 +76,9 @@ Desktop.ini
 
 # User-specific configuration files
 *.user
-*.workspace # General workspace files, can be from various tools
-*.suo       # Visual Studio Solution User Options
-*.sln.docstates # Visual Studio
+# General workspace files, can be from various tools
+*.workspace
+# Visual Studio Solution User Options
+*.suo
+# Visual Studio
+*.sln.docstates

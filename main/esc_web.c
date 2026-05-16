@@ -16,22 +16,43 @@
 static const char *TAG = "esc_web";
 static httpd_handle_t s_server = NULL;
 
+static const char *FAVICON_SVG =
+"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\" role=\"img\" aria-label=\"ESC fan logo\">"
+"<rect width=\"64\" height=\"64\" rx=\"12\" fill=\"#111827\"/>"
+"<g transform=\"translate(32 24)\"><circle r=\"16\" fill=\"#f8fafc\"/>"
+"<g fill=\"none\" stroke=\"#111827\" stroke-width=\"3\" stroke-linecap=\"round\">"
+"<path d=\"M0-13v7\"/><path d=\"M0-13v7\" transform=\"rotate(60)\"/><path d=\"M0-13v7\" transform=\"rotate(120)\"/>"
+"<path d=\"M0-13v7\" transform=\"rotate(180)\"/><path d=\"M0-13v7\" transform=\"rotate(240)\"/><path d=\"M0-13v7\" transform=\"rotate(300)\"/>"
+"</g><g fill=\"#2563eb\">"
+"<path d=\"M0-3C3-11 10-16 14-13c4 3 1 10-8 14C3 2 1 0 0-3Z\"/>"
+"<path d=\"M0-3C3-11 10-16 14-13c4 3 1 10-8 14C3 2 1 0 0-3Z\" transform=\"rotate(120)\"/>"
+"<path d=\"M0-3C3-11 10-16 14-13c4 3 1 10-8 14C3 2 1 0 0-3Z\" transform=\"rotate(240)\"/>"
+"</g><circle r=\"5\" fill=\"#111827\"/><circle r=\"2.2\" fill=\"#f8fafc\"/></g>"
+"<path d=\"M5 55V48H10V55H13V48H18V55H21V48H26V55H29V48H34V55H37V48H42V55H45V48H50V55H53V48H58V55H61\" fill=\"none\" stroke=\"#2563eb\" stroke-width=\"1.4\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" opacity=\".65\"/>"
+"<text x=\"32\" y=\"54\" text-anchor=\"middle\" font-family=\"Arial, Helvetica, sans-serif\" font-size=\"16\" font-weight=\"800\" fill=\"#f8fafc\" stroke=\"#111827\" stroke-width=\"2.6\" paint-order=\"stroke fill\">ESC</text>"
+"</svg>";
+
 static const char *ESC_HTML =
 "<!DOCTYPE html><html lang='zh-CN'><head><meta charset='UTF-8'>"
 "<meta name='viewport' content='width=device-width,initial-scale=1.0'>"
+"<link rel='icon' type='image/svg+xml' href='/favicon.svg'>"
 "<title>ESP32-C3 ESC 控制台</title>"
 "<style>"
 ":root{--bg:#f5f7fb;--panel:#fff;--ink:#20242a;--muted:#687282;--line:#d8dee9;--blue:#2563eb;--green:#0f9f6e;--red:#d14d45;--amber:#bd7417}"
 "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;line-height:1.55}"
-"header{background:#101827;color:#fff;padding:22px 18px}main{width:min(1040px,calc(100% - 28px));margin:22px auto 42px}.top{width:min(1040px,calc(100% - 28px));margin:0 auto}"
+"header{background:#101827;color:#fff;padding:22px 18px}main{width:min(1040px,calc(100% - 28px));margin:22px auto 42px}.top{width:min(1040px,calc(100% - 28px));margin:0 auto}.brand{display:flex;align-items:center;gap:14px}.brand-logo{width:128px;height:128px;border-radius:12px;flex:0 0 auto;box-shadow:0 10px 24px rgba(0,0,0,.24)}"
 "h1{font-size:30px;margin:0 0 6px}h2{font-size:22px;margin:0 0 14px}.sub{color:#d9e1ee;margin:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;box-shadow:0 8px 22px rgba(18,25,38,.08)}"
+".links{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.links a{display:inline-flex;align-items:center;gap:8px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.24);border-radius:6px;padding:7px 10px;background:rgba(255,255,255,.08);font-weight:700}.links svg{width:20px;height:20px;fill:currentColor}"
 "label{display:block;font-weight:700;margin:13px 0 7px}select,input{width:100%;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);font-size:16px;padding:10px}input[type=range]{padding:0;accent-color:var(--blue)}"
 ".row{display:grid;grid-template-columns:1fr 130px;gap:10px;align-items:center}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px}.metric{border:1px solid var(--line);border-radius:6px;padding:10px;background:#fbfcff}.metric b{display:block;color:var(--muted);font-size:12px}.metric span{font-size:20px;font-weight:800}"
 ".actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}button{border:0;border-radius:6px;padding:11px 14px;font-size:15px;font-weight:800;cursor:pointer}.primary{background:var(--blue);color:#fff}.enable{background:var(--green);color:#fff}.stop{background:var(--red);color:#fff}.ghost{background:#e9eef7;color:#273142}"
 ".status{margin-top:12px;padding:10px;border-radius:6px;background:#eef6ff;color:#1c4b82}.warn{background:#fff7e8;border-left:4px solid var(--amber);padding:12px;border-radius:0 6px 6px 0;color:#553810}.locked{color:var(--red)}.ok{color:var(--green)}"
-"canvas{width:100%;height:260px;border:1px solid var(--line);border-radius:8px;background:#fff;display:block}.disabled{opacity:.55}.footer{color:var(--muted);font-size:13px;margin-top:16px}@media(max-width:760px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}}"
+"canvas{width:100%;height:260px;border:1px solid var(--line);border-radius:8px;background:#fff;display:block}.disabled{opacity:.55}.footer{color:var(--muted);font-size:13px;margin-top:16px}@media(max-width:760px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.brand{align-items:flex-start}.brand-logo{width:108px;height:108px}}"
 "</style></head><body>"
-"<header><div class='top'><h1>ESP32-C3 ESC 控制台</h1><p class='sub'>支持 PWM 和 DShot 输出，网页默认锁定，解锁后才会驱动 ESC。</p></div></header>"
+"<header><div class='top'><div class='brand'><img class='brand-logo' src='/favicon.svg' alt='ESC logo'><div><h1>ESP32-C3 ESC 控制台</h1><p class='sub'>支持 PWM 和 DShot 输出，网页默认锁定，解锁后才会驱动 ESC。</p><div class='links'>"
+"<a href='https://github.com/rovesoul/ESP32C3-ESC-control-tester' target='_blank' rel='noopener'><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 .5A11.5 11.5 0 0 0 8.36 22.9c.58.1.79-.25.79-.56v-2.02c-3.22.7-3.9-1.38-3.9-1.38-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.17.08 1.79 1.2 1.79 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.72 0-1.26.45-2.3 1.2-3.11-.12-.3-.52-1.48.11-3.07 0 0 .98-.31 3.19 1.19a11.1 11.1 0 0 1 5.8 0c2.21-1.5 3.18-1.19 3.18-1.19.64 1.59.24 2.77.12 3.07.75.81 1.2 1.85 1.2 3.11 0 4.45-2.71 5.43-5.29 5.72.42.36.79 1.07.79 2.16v3.03c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z'/></svg>GitHub</a>"
+"<a href='https://space.bilibili.com/185878223' target='_blank' rel='noopener'><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M8.1 3.2a.9.9 0 0 1 1.27.05L12 6.1l2.63-2.85a.9.9 0 1 1 1.32 1.22L13.9 6.7h3.35A3.75 3.75 0 0 1 21 10.45v5.3a3.75 3.75 0 0 1-3.75 3.75H6.75A3.75 3.75 0 0 1 3 15.75v-5.3A3.75 3.75 0 0 1 6.75 6.7h3.35L8.05 4.47a.9.9 0 0 1 .05-1.27ZM6.75 8.5c-1.08 0-1.95.87-1.95 1.95v5.3c0 1.08.87 1.95 1.95 1.95h10.5c1.08 0 1.95-.87 1.95-1.95v-5.3c0-1.08-.87-1.95-1.95-1.95H6.75Zm2.15 3.1a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6.2 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm-6.65 3.35a.75.75 0 0 1 1.05-.15c1.52 1.13 3.48 1.13 5 0a.75.75 0 0 1 .9 1.2 5.7 5.7 0 0 1-6.8 0 .75.75 0 0 1-.15-1.05Z'/></svg>Bilibili</a>"
+"</div></div></div></div></header>"
 "<main><div class='grid'><section class='card'><h2>输出设置</h2>"
 "<label for='protocol'>电调驱动形式</label><select id='protocol'><option value='pwm'>PWM / Servo PWM</option><option value='pulse'>脉宽控制</option><option value='dshot150'>DShot150</option><option value='dshot300'>DShot300</option><option value='dshot600'>DShot600</option><option value='dshot1200'>DShot1200</option></select>"
 "<label for='gpio'>输出 GPIO</label><select id='gpio'><option>0</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>10</option><option>20</option><option>21</option></select>"
@@ -91,6 +112,14 @@ static esp_err_t root_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html");
     httpd_resp_send(req, ESC_HTML, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+static esp_err_t favicon_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "image/svg+xml");
+    httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=86400");
+    httpd_resp_send(req, FAVICON_SVG, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
@@ -198,6 +227,7 @@ esp_err_t esc_web_start(void)
     ESP_RETURN_ON_ERROR(httpd_start(&s_server, &config), TAG, "Failed to start ESC web server");
 
     register_get("/", root_handler);
+    register_get("/favicon.svg", favicon_handler);
     register_get("/api/state", state_handler);
     register_get("/api/set", set_handler);
     register_get("/api/enable", enable_handler);
