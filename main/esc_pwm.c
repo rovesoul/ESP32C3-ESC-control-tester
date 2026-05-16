@@ -482,6 +482,7 @@ esp_err_t esc_pwm_stop(void)
 {
     s_enabled = false;
     s_config.duty_tenths = 0;
+    s_config.pulse_width_us = ESC_PWM_DEFAULT_PULSE_WIDTH_US;
     return apply_output_duty();
 }
 

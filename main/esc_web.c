@@ -49,7 +49,7 @@ static const char *ESC_HTML =
 ".status{margin-top:12px;padding:10px;border-radius:6px;background:#eef6ff;color:#1c4b82}.warn{background:#fff7e8;border-left:4px solid var(--amber);padding:12px;border-radius:0 6px 6px 0;color:#553810}.locked{color:var(--red)}.ok{color:var(--green)}"
 "canvas{width:100%;height:260px;border:1px solid var(--line);border-radius:8px;background:#fff;display:block}.disabled{opacity:.55}.footer{color:var(--muted);font-size:13px;margin-top:16px}@media(max-width:760px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.brand{align-items:flex-start}.brand-logo{width:108px;height:108px}}"
 "</style></head><body>"
-"<header><div class='top'><div class='brand'><img class='brand-logo' src='/favicon.svg' alt='ESC logo'><div><h1>ESP32-C3 ESC 控制台</h1><p class='sub'>支持 PWM 和 DShot 输出，网页默认锁定，解锁后才会驱动 ESC。</p><div class='links'>"
+"<header><div class='top'><div class='brand'><img class='brand-logo' src='/favicon.svg' alt='ESC logo'><div><h1>ESP32-C3 ESC 控制台</h1><p class='sub'>支持 PWM 和 DShot 输出，点击解锁后才会驱动 ESC。</p><div class='links'>"
 "<a href='https://github.com/rovesoul/ESP32C3-ESC-control-tester' target='_blank' rel='noopener'><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M12 .5A11.5 11.5 0 0 0 8.36 22.9c.58.1.79-.25.79-.56v-2.02c-3.22.7-3.9-1.38-3.9-1.38-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.17.08 1.79 1.2 1.79 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.57-.29-5.27-1.28-5.27-5.72 0-1.26.45-2.3 1.2-3.11-.12-.3-.52-1.48.11-3.07 0 0 .98-.31 3.19 1.19a11.1 11.1 0 0 1 5.8 0c2.21-1.5 3.18-1.19 3.18-1.19.64 1.59.24 2.77.12 3.07.75.81 1.2 1.85 1.2 3.11 0 4.45-2.71 5.43-5.29 5.72.42.36.79 1.07.79 2.16v3.03c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z'/></svg>GitHub</a>"
 "<a href='https://space.bilibili.com/185878223' target='_blank' rel='noopener'><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M8.1 3.2a.9.9 0 0 1 1.27.05L12 6.1l2.63-2.85a.9.9 0 1 1 1.32 1.22L13.9 6.7h3.35A3.75 3.75 0 0 1 21 10.45v5.3a3.75 3.75 0 0 1-3.75 3.75H6.75A3.75 3.75 0 0 1 3 15.75v-5.3A3.75 3.75 0 0 1 6.75 6.7h3.35L8.05 4.47a.9.9 0 0 1 .05-1.27ZM6.75 8.5c-1.08 0-1.95.87-1.95 1.95v5.3c0 1.08.87 1.95 1.95 1.95h10.5c1.08 0 1.95-.87 1.95-1.95v-5.3c0-1.08-.87-1.95-1.95-1.95H6.75Zm2.15 3.1a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6.2 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm-6.65 3.35a.75.75 0 0 1 1.05-.15c1.52 1.13 3.48 1.13 5 0a.75.75 0 0 1 .9 1.2 5.7 5.7 0 0 1-6.8 0 .75.75 0 0 1-.15-1.05Z'/></svg>Bilibili</a>"
 "</div></div></div></div></header>"
@@ -59,9 +59,9 @@ static const char *ESC_HTML =
 "<div id='freqRow'><label>频率 Hz（50-1000，PWM/脉宽）</label><div class='row'><input id='freqRange' type='range' min='50' max='1000' value='50'><input id='freq' type='number' min='50' max='1000' value='50'></div></div>"
 "<div id='dutyRow'><label>占空比 %（0-100）</label><div class='row'><input id='dutyRange' type='range' min='0' max='100' step='0.1' value='5'><input id='duty' type='number' min='0' max='100' step='0.1' value='5'></div></div>"
 "<div id='pulseRow'><label>高电平脉宽 us（1000-2000）</label><div class='row'><input id='pulseRange' type='range' min='1000' max='2000' step='1' value='1000'><input id='pulseWidth' type='number' min='1000' max='2000' step='1' value='1000'></div></div>"
-"<div class='actions'><button class='primary' id='save'>保存设置</button><button class='enable' id='enable'>解锁输出</button><button class='ghost' id='lock'>锁定输出</button><button class='stop' id='stop'>STOP</button></div><div id='status' class='status'>滑块会实时应用到输出，保存按钮只负责写入 NVS。</div></section>"
+"<div class='actions'><button class='primary' id='save'>保存设置</button><button class='enable' id='enable'>解锁输出</button><button class='stop' id='stop'>STOP</button></div><div id='status' class='status'>滑块会实时应用到输出，保存按钮只负责写入 NVS。</div></section>"
 "<section class='card'><h2>实时状态</h2><canvas id='wave' width='900' height='300'></canvas><div class='metrics'><div class='metric'><b>设备 IP</b><span id='ip'>-</span></div><div class='metric'><b>输出状态</b><span id='enabled'>-</span></div><div class='metric'><b id='periodLabel'>周期</b><span id='period'>-</span></div><div class='metric'><b id='pulseLabel'>高电平脉宽</b><span id='pulse'>-</span></div></div></section></div>"
-"<section class='card' style='margin-top:16px'><h2>安全提醒</h2><p class='warn'>测试 ESC 前先拆桨。网页默认锁定输出，只有点击“解锁输出”后才会按当前协议和占空比驱动 ESC。STOP 会立即锁定并输出停机值。</p><p class='footer'>XIAO ESP32-C3 上建议优先用 GPIO3/4，其次 GPIO5/6/7/10。GPIO8 当前用于呼吸灯且也是板载 LED/SDA，GPIO9 是 Boot 长按清配网且是 SCL，GPIO20/21 是串口 RX/TX。</p></section>"
+"<section class='card' style='margin-top:16px'><h2>安全提醒</h2><p class='warn'>测试 ESC 前先拆桨。只有点击“解锁输出”后才会按当前协议和油门驱动 ESC。STOP 会立即停止输出并把油门归零。</p><p class='footer'>XIAO ESP32-C3 上建议优先用 GPIO3/4，其次 GPIO5/6/7/10。GPIO8 当前用于呼吸灯且也是板载 LED/SDA，GPIO9 是 Boot 长按清配网且是 SCL，GPIO20/21 是串口 RX/TX。</p></section>"
 "</main><script>"
 "const $=id=>document.getElementById(id);const fields=['gpio','freq','freqRange','duty','dutyRange','pulseWidth','pulseRange'];"
 "function clamp(v,min,max){return Math.min(max,Math.max(min,Number(v)||0))}"
@@ -74,18 +74,18 @@ static const char *ESC_HTML =
 "function syncPulseLimit(){const f=clamp($('freq').value,50,1000),maxPulse=Math.min(2000,Math.floor(1000000/f));$('pulseRange').max=maxPulse;$('pulseWidth').max=maxPulse;if(Number($('pulseWidth').value)>maxPulse){$('pulseWidth').value=maxPulse;$('pulseRange').value=maxPulse}}"
 "function draw(){syncPulseLimit();const c=$('wave'),x=c.getContext('2d'),p=$('protocol').value,f=clamp($('freq').value,50,1000),period=1000000/f,manualPulse=clamp($('pulseWidth').value,1000,Number($('pulseWidth').max)||2000),dutyInput=clamp($('duty').value,0,100),pulse=isPulse()?manualPulse:period*dutyInput/100,d=isPulse()?pulse*100/period:dutyInput,base=230,hi=80;x.clearRect(0,0,c.width,c.height);x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.strokeStyle='#e1e7f0';x.lineWidth=1;for(let i=60;i<c.width-30;i+=60){x.beginPath();x.moveTo(i,36);x.lineTo(i,250);x.stroke()}const isD=isDigital(),w=60+Math.min(d,100)*6.6;x.strokeStyle=isD?'#0f9f6e':(isPulse()?'#bd7417':'#2563eb');x.lineWidth=6;x.lineJoin='round';x.beginPath();x.moveTo(70,base);x.lineTo(70,hi);x.lineTo(70+w,hi);x.lineTo(70+w,base);x.lineTo(830,base);x.stroke();x.fillStyle='#20242a';x.font='22px sans-serif';x.fillText((isD?p.toUpperCase():(isPulse()?'脉宽: ':'PWM: ')+f+'Hz')+' / '+(isPulse()?pulse.toFixed(0)+'us':d.toFixed(1)+'%'),60,42);x.font='16px sans-serif';x.fillStyle='#69717d';if(isD){const baud=p.replace('dshot','');x.fillText('DShot'+baud+'，油门值 '+dshotThrottle(dutyInput),60,280);$('periodLabel').textContent='协议速率';$('pulseLabel').textContent='DShot 油门';$('period').textContent=baud+'k';$('pulse').textContent=dshotThrottle(dutyInput)}else{x.fillText('周期 '+(period/1000).toFixed(2)+'ms，高电平 '+pulse.toFixed(0)+'us，占空比 '+d.toFixed(2)+'%',60,280);$('periodLabel').textContent='周期';$('pulseLabel').textContent='高电平脉宽';$('period').textContent=(period/1000).toFixed(2)+'ms';$('pulse').textContent=pulse.toFixed(0)+'us'}$('freqRow').className=isD?'disabled':'';$('dutyRow').className=isPulse()?'disabled':'';$('pulseRow').className=isPulse()?'':'disabled'}"
 "async function api(path){const r=await fetch(path);if(!r.ok)throw new Error(await r.text());return r.json()}"
-"function applyState(s){const pulse=s.configured_pulse_width_us||1000;$('protocol').value=s.protocol;$('gpio').value=s.gpio;$('freq').value=s.frequency_hz;$('freqRange').value=s.frequency_hz;$('duty').value=(s.duty_tenths/10).toFixed(1);$('dutyRange').value=(s.duty_tenths/10).toFixed(1);$('pulseWidth').value=pulse;$('pulseRange').value=pulse;$('ip').textContent=s.ip;$('enabled').textContent=s.enabled?'已解锁':'已锁定';$('enabled').className=s.enabled?'ok':'locked';draw()}"
+"function applyState(s){const pulse=s.configured_pulse_width_us||1000;$('protocol').value=s.protocol;$('gpio').value=s.gpio;$('freq').value=s.frequency_hz;$('freqRange').value=s.frequency_hz;$('duty').value=(s.duty_tenths/10).toFixed(1);$('dutyRange').value=(s.duty_tenths/10).toFixed(1);$('pulseWidth').value=pulse;$('pulseRange').value=pulse;$('ip').textContent=s.ip;$('enabled').textContent=s.enabled?'已解锁':'未解锁';$('enabled').className=s.enabled?'ok':'locked';draw()}"
 "async function refresh(){try{applyState(await api('/api/state'));setStatus('状态已同步')}catch(e){setStatus('读取失败: '+e.message,true)}}"
 "let liveTimer=0,liveBusy=false,livePending=false;"
 "function buildSetQuery(save){return new URLSearchParams({protocol:$('protocol').value,gpio:$('gpio').value,frequency:$('freq').value,duty:$('duty').value,pulse_width:$('pulseWidth').value,save:save?'1':'0'})}"
-"async function sendLive(){if(liveBusy){livePending=true;return}liveBusy=true;try{const s=await api('/api/set?'+buildSetQuery(false));$('enabled').textContent=s.enabled?'已解锁':'已锁定';$('enabled').className=s.enabled?'ok':'locked';setStatus(s.enabled?'实时输出已更新':'参数已更新，当前仍锁定')}catch(e){setStatus('实时更新失败: '+e.message,true)}finally{liveBusy=false;if(livePending){livePending=false;sendLive()}}}"
+"async function sendLive(){if(liveBusy){livePending=true;return}liveBusy=true;try{const s=await api('/api/set?'+buildSetQuery(false));$('enabled').textContent=s.enabled?'已解锁':'未解锁';$('enabled').className=s.enabled?'ok':'locked';setStatus(s.enabled?'实时输出已更新':'参数已更新，当前未解锁')}catch(e){setStatus('实时更新失败: '+e.message,true)}finally{liveBusy=false;if(livePending){livePending=false;sendLive()}}}"
 "function scheduleLive(){clearTimeout(liveTimer);liveTimer=setTimeout(sendLive,5)}"
 "function resetThrottleControls(){$('duty').value='0.0';$('dutyRange').value='0';$('pulseWidth').value='1000';$('pulseRange').value='1000'}"
-"async function protocolChanged(){clearTimeout(liveTimer);livePending=false;resetThrottleControls();draw();try{await api('/api/stop');applyState(await api('/api/set?'+buildSetQuery(false)));setStatus('协议已切换，输出已 STOP 并锁定')}catch(e){setStatus('协议切换失败: '+e.message,true)}}"
+"async function protocolChanged(){clearTimeout(liveTimer);livePending=false;resetThrottleControls();draw();try{await api('/api/stop');applyState(await api('/api/set?'+buildSetQuery(false)));setStatus('协议已切换，输出已 STOP')}catch(e){setStatus('协议切换失败: '+e.message,true)}}"
 "async function save(){try{applyState(await api('/api/set?'+buildSetQuery(true)));setStatus('设置已保存到 NVS')}catch(e){setStatus('保存失败: '+e.message,true)}}"
-"async function enable(v){try{applyState(await api('/api/enable?value='+(v?1:0)));setStatus(v?'已解锁输出':'已锁定输出')}catch(e){setStatus('操作失败: '+e.message,true)}}"
-"async function stop(){try{applyState(await api('/api/stop'));setStatus('STOP 已执行，输出锁定')}catch(e){setStatus('STOP 失败: '+e.message,true)}}"
-"$('save').onclick=save;$('enable').onclick=()=>enable(true);$('lock').onclick=()=>enable(false);$('stop').onclick=stop;$('protocol').addEventListener('change',protocolChanged);fields.forEach(id=>$(id).addEventListener('input',()=>{draw();scheduleLive()}));refresh();"
+"async function enable(){try{applyState(await api('/api/enable'));setStatus('已解锁输出')}catch(e){setStatus('操作失败: '+e.message,true)}}"
+"async function stop(){clearTimeout(liveTimer);livePending=false;resetThrottleControls();draw();try{applyState(await api('/api/stop'));setStatus('STOP 已执行，输出已停止')}catch(e){setStatus('STOP 失败: '+e.message,true)}}"
+"$('save').onclick=save;$('enable').onclick=enable;$('stop').onclick=stop;$('protocol').addEventListener('change',protocolChanged);fields.forEach(id=>$(id).addEventListener('input',()=>{draw();scheduleLive()}));refresh();"
 "</script></body></html>";
 
 static esp_err_t send_json_state(httpd_req_t *req)
@@ -187,13 +187,7 @@ static esp_err_t set_handler(httpd_req_t *req)
 
 static esp_err_t enable_handler(httpd_req_t *req)
 {
-    char value[8] = {0};
-    bool enabled = false;
-    if (get_query_value(req, "value", value, sizeof(value))) {
-        enabled = atoi(value) != 0;
-    }
-
-    ESP_RETURN_ON_ERROR(esc_pwm_set_enabled(enabled), TAG, "Failed to change output lock");
+    ESP_RETURN_ON_ERROR(esc_pwm_set_enabled(true), TAG, "Failed to enable ESC output");
     return send_json_state(req);
 }
 
