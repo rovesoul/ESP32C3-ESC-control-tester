@@ -15,6 +15,7 @@
 #define ESC_NVS_KEY_GPIO "gpio"
 #define ESC_NVS_KEY_FREQ "freq"
 #define ESC_NVS_KEY_DUTY "duty"
+#define ESC_NVS_KEY_PULSE "pulse"
 
 #define ESC_PWM_SPEED_MODE LEDC_LOW_SPEED_MODE
 #define ESC_PWM_TIMER LEDC_TIMER_0
@@ -35,6 +36,7 @@ static esc_pwm_config_t s_config = {
     .gpio_num = ESC_PWM_DEFAULT_GPIO,
     .frequency_hz = ESC_PWM_DEFAULT_FREQ_HZ,
     .duty_tenths = ESC_PWM_DEFAULT_DUTY_TENTHS,
+    .pulse_width_us = ESC_PWM_DEFAULT_PULSE_WIDTH_US,
 };
 static bool s_enabled = false;
 static bool s_initialized = false;
@@ -70,9 +72,28 @@ static uint32_t duty_tenths_to_ledc(uint16_t duty_tenths)
     return ((uint32_t)duty_tenths * ESC_PWM_MAX_DUTY) / 1000U;
 }
 
+static uint16_t pulse_width_to_duty_tenths(uint32_t frequency_hz, uint16_t pulse_width_us)
+{
+    if (frequency_hz == 0) {
+        return 0;
+    }
+    uint32_t duty_tenths = ((uint32_t)pulse_width_us * frequency_hz + 500U) / 1000U;
+    return duty_tenths > 1000U ? 1000U : (uint16_t)duty_tenths;
+}
+
+static uint16_t get_effective_duty_tenths(void)
+{
+    if (s_config.protocol == ESC_PROTOCOL_PULSE_WIDTH) {
+        return pulse_width_to_duty_tenths(s_config.frequency_hz, s_config.pulse_width_us);
+    }
+    return s_config.duty_tenths;
+}
+
 const char *esc_pwm_protocol_to_string(esc_protocol_t protocol)
 {
     switch (protocol) {
+    case ESC_PROTOCOL_PULSE_WIDTH:
+        return "pulse";
     case ESC_PROTOCOL_DSHOT150:
         return "dshot150";
     case ESC_PROTOCOL_DSHOT300:
@@ -94,6 +115,8 @@ bool esc_pwm_protocol_from_string(const char *value, esc_protocol_t *protocol)
     }
     if (strcmp(value, "pwm") == 0) {
         *protocol = ESC_PROTOCOL_PWM;
+    } else if (strcmp(value, "pulse") == 0) {
+        *protocol = ESC_PROTOCOL_PULSE_WIDTH;
     } else if (strcmp(value, "dshot150") == 0) {
         *protocol = ESC_PROTOCOL_DSHOT150;
     } else if (strcmp(value, "dshot300") == 0) {
@@ -157,6 +180,9 @@ static esp_err_t save_config(void)
         err = nvs_set_u16(handle, ESC_NVS_KEY_DUTY, s_config.duty_tenths);
     }
     if (err == ESP_OK) {
+        err = nvs_set_u16(handle, ESC_NVS_KEY_PULSE, s_config.pulse_width_us);
+    }
+    if (err == ESP_OK) {
         err = nvs_commit(handle);
     }
 
@@ -177,25 +203,37 @@ static void load_config(void)
     uint8_t protocol = (uint8_t)s_config.protocol;
     uint32_t frequency_hz = s_config.frequency_hz;
     uint16_t duty_tenths = s_config.duty_tenths;
+    uint16_t pulse_width_us = s_config.pulse_width_us;
 
     nvs_get_u8(handle, ESC_NVS_KEY_PROTOCOL, &protocol);
     nvs_get_u8(handle, ESC_NVS_KEY_GPIO, &gpio);
     nvs_get_u32(handle, ESC_NVS_KEY_FREQ, &frequency_hz);
     nvs_get_u16(handle, ESC_NVS_KEY_DUTY, &duty_tenths);
+    if (nvs_get_u16(handle, ESC_NVS_KEY_PULSE, &pulse_width_us) != ESP_OK) {
+        pulse_width_us = (uint16_t)((1000000U * (uint32_t)duty_tenths) /
+                                    (1000U * frequency_hz));
+        if (pulse_width_us < ESC_PWM_MIN_PULSE_WIDTH_US ||
+            pulse_width_us > ESC_PWM_MAX_PULSE_WIDTH_US) {
+            pulse_width_us = ESC_PWM_DEFAULT_PULSE_WIDTH_US;
+        }
+    }
     nvs_close(handle);
 
-    if (protocol <= ESC_PROTOCOL_DSHOT1200 &&
+    if (protocol <= ESC_PROTOCOL_PULSE_WIDTH &&
         esc_pwm_gpio_is_supported((gpio_num_t)gpio) &&
         frequency_hz >= ESC_PWM_MIN_FREQ_HZ &&
         frequency_hz <= ESC_PWM_MAX_FREQ_HZ &&
-        duty_tenths <= 1000) {
+        duty_tenths <= 1000 &&
+        pulse_width_us >= ESC_PWM_MIN_PULSE_WIDTH_US &&
+        pulse_width_us <= ESC_PWM_MAX_PULSE_WIDTH_US) {
         s_config.protocol = (esc_protocol_t)protocol;
         s_config.gpio_num = (gpio_num_t)gpio;
         s_config.frequency_hz = frequency_hz;
         s_config.duty_tenths = duty_tenths;
-        ESP_LOGI(TAG, "Loaded ESC config: protocol=%s, GPIO=%d, freq=%" PRIu32 "Hz, duty=%u.%u%%",
+        s_config.pulse_width_us = pulse_width_us;
+        ESP_LOGI(TAG, "Loaded ESC config: protocol=%s, GPIO=%d, freq=%" PRIu32 "Hz, duty=%u.%u%%, pulse=%uus",
                  esc_pwm_protocol_to_string(s_config.protocol), s_config.gpio_num, s_config.frequency_hz,
-                 s_config.duty_tenths / 10, s_config.duty_tenths % 10);
+                 s_config.duty_tenths / 10, s_config.duty_tenths % 10, s_config.pulse_width_us);
     } else {
         ESP_LOGW(TAG, "Saved ESC config invalid, using defaults");
     }
@@ -335,7 +373,7 @@ static esp_err_t apply_ledc_config(void)
         .channel = ESC_PWM_CHANNEL,
         .timer_sel = ESC_PWM_TIMER,
         .gpio_num = s_config.gpio_num,
-        .duty = s_enabled ? duty_tenths_to_ledc(s_config.duty_tenths) : 0,
+        .duty = s_enabled ? duty_tenths_to_ledc(get_effective_duty_tenths()) : 0,
         .hpoint = 0,
         .flags.output_invert = 0,
     };
@@ -349,7 +387,7 @@ static esp_err_t apply_output_duty(void)
         return apply_dshot_output();
     }
 
-    uint32_t duty = s_enabled ? duty_tenths_to_ledc(s_config.duty_tenths) : 0;
+    uint32_t duty = s_enabled ? duty_tenths_to_ledc(get_effective_duty_tenths()) : 0;
     ESP_RETURN_ON_ERROR(ledc_set_duty(ESC_PWM_SPEED_MODE, ESC_PWM_CHANNEL, duty),
                         TAG, "Failed to set LEDC duty");
     ESP_RETURN_ON_ERROR(ledc_update_duty(ESC_PWM_SPEED_MODE, ESC_PWM_CHANNEL),
@@ -379,9 +417,10 @@ esp_err_t esc_pwm_init(void)
 
 esp_err_t esc_pwm_set_config(esc_protocol_t protocol, gpio_num_t gpio_num,
                              uint32_t frequency_hz, uint16_t duty_tenths,
+                             uint16_t pulse_width_us,
                              bool save)
 {
-    if (protocol > ESC_PROTOCOL_DSHOT1200) {
+    if (protocol > ESC_PROTOCOL_PULSE_WIDTH) {
         ESP_LOGE(TAG, "Unsupported ESC protocol: %d", protocol);
         return ESP_ERR_INVALID_ARG;
     }
@@ -395,6 +434,14 @@ esp_err_t esc_pwm_set_config(esc_protocol_t protocol, gpio_num_t gpio_num,
                  frequency_hz, duty_tenths);
         return ESP_ERR_INVALID_ARG;
     }
+    if (pulse_width_us < ESC_PWM_MIN_PULSE_WIDTH_US ||
+        pulse_width_us > ESC_PWM_MAX_PULSE_WIDTH_US ||
+        (protocol == ESC_PROTOCOL_PULSE_WIDTH &&
+         ((uint32_t)pulse_width_us * frequency_hz) > 1000000U)) {
+        ESP_LOGE(TAG, "Invalid pulse width config: freq=%" PRIu32 ", pulse=%uus",
+                 frequency_hz, pulse_width_us);
+        return ESP_ERR_INVALID_ARG;
+    }
 
     esc_protocol_t old_protocol = s_config.protocol;
     gpio_num_t old_gpio = s_config.gpio_num;
@@ -402,6 +449,7 @@ esp_err_t esc_pwm_set_config(esc_protocol_t protocol, gpio_num_t gpio_num,
     s_config.gpio_num = gpio_num;
     s_config.frequency_hz = frequency_hz;
     s_config.duty_tenths = duty_tenths;
+    s_config.pulse_width_us = pulse_width_us;
 
     bool output_changed = old_protocol != protocol || old_gpio != gpio_num;
     esp_err_t err = protocol_is_dshot(protocol) ? apply_dshot_config(output_changed) : apply_ledc_config();
@@ -416,9 +464,9 @@ esp_err_t esc_pwm_set_config(esc_protocol_t protocol, gpio_num_t gpio_num,
     }
     ESP_RETURN_ON_ERROR(apply_output_duty(), TAG, "Failed to update ESC output");
 
-    ESP_LOGI(TAG, "ESC config set: protocol=%s, GPIO=%d, freq=%" PRIu32 "Hz, duty=%u.%u%%, enabled=%d",
+    ESP_LOGI(TAG, "ESC config set: protocol=%s, GPIO=%d, freq=%" PRIu32 "Hz, duty=%u.%u%%, pulse=%uus, enabled=%d",
              esc_pwm_protocol_to_string(s_config.protocol), s_config.gpio_num, s_config.frequency_hz,
-             s_config.duty_tenths / 10, s_config.duty_tenths % 10, s_enabled);
+             s_config.duty_tenths / 10, s_config.duty_tenths % 10, s_config.pulse_width_us, s_enabled);
     return ESP_OK;
 }
 
@@ -450,6 +498,9 @@ uint32_t esc_pwm_get_pulse_width_us(void)
 {
     if (s_config.frequency_hz == 0) {
         return 0;
+    }
+    if (s_config.protocol == ESC_PROTOCOL_PULSE_WIDTH) {
+        return s_config.pulse_width_us;
     }
     return (1000000U * (uint32_t)s_config.duty_tenths) /
            (1000U * s_config.frequency_hz);

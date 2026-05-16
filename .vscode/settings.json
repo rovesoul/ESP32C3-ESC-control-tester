@@ -3,7 +3,7 @@
   "idf.openOcdConfigs": [
     "board/esp32c3-builtin.cfg"
   ],
-  "idf.port": "/dev/tty.usbmodem22301",
+  "idf.port": "/dev/tty.usbmodem22401",
   "idf.currentSetup": "/Users/donghuibiao/ESPIDF/idfv6/v6.0/esp-idf",
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32c3"
@@ -14,6 +14,6 @@
     "--query-driver=**",
     "--compile-commands-dir=/Users/donghuibiao/ESPIDF/esp32c3_claude_mqtt5/build"
   ],
-  "idf.flashType": "JTAG",
-  "idf.monitorPort": "/dev/tty.usbmodem22301"
+  "idf.flashType": "UART",
+  "idf.monitorPort": "/dev/tty.usbmodem22401"
 }

@@ -33,47 +33,53 @@ static const char *ESC_HTML =
 "</style></head><body>"
 "<header><div class='top'><h1>ESP32-C3 ESC 控制台</h1><p class='sub'>支持 PWM 和 DShot 输出，网页默认锁定，解锁后才会驱动 ESC。</p></div></header>"
 "<main><div class='grid'><section class='card'><h2>输出设置</h2>"
-"<label for='protocol'>电调驱动形式</label><select id='protocol'><option value='pwm'>PWM / Servo PWM</option><option value='dshot150'>DShot150</option><option value='dshot300'>DShot300</option><option value='dshot600'>DShot600</option><option value='dshot1200'>DShot1200</option></select>"
+"<label for='protocol'>电调驱动形式</label><select id='protocol'><option value='pwm'>PWM / Servo PWM</option><option value='pulse'>脉宽控制</option><option value='dshot150'>DShot150</option><option value='dshot300'>DShot300</option><option value='dshot600'>DShot600</option><option value='dshot1200'>DShot1200</option></select>"
 "<label for='gpio'>输出 GPIO</label><select id='gpio'><option>0</option><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>10</option><option>20</option><option>21</option></select>"
-"<div id='freqRow'><label>频率 Hz（50-1000，仅 PWM）</label><div class='row'><input id='freqRange' type='range' min='50' max='1000' value='50'><input id='freq' type='number' min='50' max='1000' value='50'></div></div>"
-"<label>占空比 %（0-100）</label><div class='row'><input id='dutyRange' type='range' min='0' max='100' step='0.1' value='5'><input id='duty' type='number' min='0' max='100' step='0.1' value='5'></div>"
+"<div id='freqRow'><label>频率 Hz（50-1000，PWM/脉宽）</label><div class='row'><input id='freqRange' type='range' min='50' max='1000' value='50'><input id='freq' type='number' min='50' max='1000' value='50'></div></div>"
+"<div id='dutyRow'><label>占空比 %（0-100）</label><div class='row'><input id='dutyRange' type='range' min='0' max='100' step='0.1' value='5'><input id='duty' type='number' min='0' max='100' step='0.1' value='5'></div></div>"
+"<div id='pulseRow'><label>高电平脉宽 us（1000-2000）</label><div class='row'><input id='pulseRange' type='range' min='1000' max='2000' step='1' value='1000'><input id='pulseWidth' type='number' min='1000' max='2000' step='1' value='1000'></div></div>"
 "<div class='actions'><button class='primary' id='save'>保存设置</button><button class='enable' id='enable'>解锁输出</button><button class='ghost' id='lock'>锁定输出</button><button class='stop' id='stop'>STOP</button></div><div id='status' class='status'>滑块会实时应用到输出，保存按钮只负责写入 NVS。</div></section>"
 "<section class='card'><h2>实时状态</h2><canvas id='wave' width='900' height='300'></canvas><div class='metrics'><div class='metric'><b>设备 IP</b><span id='ip'>-</span></div><div class='metric'><b>输出状态</b><span id='enabled'>-</span></div><div class='metric'><b id='periodLabel'>周期</b><span id='period'>-</span></div><div class='metric'><b id='pulseLabel'>高电平脉宽</b><span id='pulse'>-</span></div></div></section></div>"
 "<section class='card' style='margin-top:16px'><h2>安全提醒</h2><p class='warn'>测试 ESC 前先拆桨。网页默认锁定输出，只有点击“解锁输出”后才会按当前协议和占空比驱动 ESC。STOP 会立即锁定并输出停机值。</p><p class='footer'>XIAO ESP32-C3 上建议优先用 GPIO3/4，其次 GPIO5/6/7/10。GPIO8 当前用于呼吸灯且也是板载 LED/SDA，GPIO9 是 Boot 长按清配网且是 SCL，GPIO20/21 是串口 RX/TX。</p></section>"
 "</main><script>"
-"const $=id=>document.getElementById(id);const fields=['protocol','gpio','freq','freqRange','duty','dutyRange'];"
+"const $=id=>document.getElementById(id);const fields=['gpio','freq','freqRange','duty','dutyRange','pulseWidth','pulseRange'];"
 "function clamp(v,min,max){return Math.min(max,Math.max(min,Number(v)||0))}"
 "function setStatus(t,bad=false){$('status').textContent=t;$('status').style.background=bad?'#fff0ef':'#eef6ff'}"
 "function syncPair(a,b,min,max){$(a).addEventListener('input',()=>{$(b).value=clamp($(a).value,min,max);draw()});$(b).addEventListener('input',()=>{$(a).value=clamp($(b).value,min,max);draw()})}"
-"syncPair('freqRange','freq',50,1000);syncPair('dutyRange','duty',0,100);"
-"function isDshot(){return $('protocol').value!=='pwm'}"
+"syncPair('freqRange','freq',50,1000);syncPair('dutyRange','duty',0,100);syncPair('pulseRange','pulseWidth',1000,2000);"
+"function isPulse(){return $('protocol').value==='pulse'}"
+"function isDigital(){return $('protocol').value.indexOf('dshot')===0}"
 "function dshotThrottle(d){return d<=0?0:48+Math.floor(d*(2047-48)/100)}"
-"function draw(){const c=$('wave'),x=c.getContext('2d'),p=$('protocol').value,f=clamp($('freq').value,50,1000),d=clamp($('duty').value,0,100),base=230,hi=80;x.clearRect(0,0,c.width,c.height);x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.strokeStyle='#e1e7f0';x.lineWidth=1;for(let i=60;i<c.width-30;i+=60){x.beginPath();x.moveTo(i,36);x.lineTo(i,250);x.stroke()}const isD=p!=='pwm',period=1000000/f,pulse=period*d/100,w=60+d*6.6;x.strokeStyle=isD?'#0f9f6e':'#2563eb';x.lineWidth=6;x.lineJoin='round';x.beginPath();x.moveTo(70,base);x.lineTo(70,hi);x.lineTo(70+w,hi);x.lineTo(70+w,base);x.lineTo(830,base);x.stroke();x.fillStyle='#20242a';x.font='22px sans-serif';x.fillText((isD?p.toUpperCase():'PWM: '+f+'Hz')+' / '+d.toFixed(1)+'%',60,42);x.font='16px sans-serif';x.fillStyle='#69717d';if(isD){const baud=p.replace('dshot','');x.fillText('DShot'+baud+'，油门值 '+dshotThrottle(d),60,280);$('periodLabel').textContent='协议速率';$('pulseLabel').textContent='DShot 油门';$('period').textContent=baud+'k';$('pulse').textContent=dshotThrottle(d)}else{x.fillText('周期 '+(period/1000).toFixed(2)+'ms，高电平 '+pulse.toFixed(0)+'us',60,280);$('periodLabel').textContent='周期';$('pulseLabel').textContent='高电平脉宽';$('period').textContent=(period/1000).toFixed(2)+'ms';$('pulse').textContent=pulse.toFixed(0)+'us'}$('freqRow').className=isD?'disabled':''}"
+"function syncPulseLimit(){const f=clamp($('freq').value,50,1000),maxPulse=Math.min(2000,Math.floor(1000000/f));$('pulseRange').max=maxPulse;$('pulseWidth').max=maxPulse;if(Number($('pulseWidth').value)>maxPulse){$('pulseWidth').value=maxPulse;$('pulseRange').value=maxPulse}}"
+"function draw(){syncPulseLimit();const c=$('wave'),x=c.getContext('2d'),p=$('protocol').value,f=clamp($('freq').value,50,1000),period=1000000/f,manualPulse=clamp($('pulseWidth').value,1000,Number($('pulseWidth').max)||2000),dutyInput=clamp($('duty').value,0,100),pulse=isPulse()?manualPulse:period*dutyInput/100,d=isPulse()?pulse*100/period:dutyInput,base=230,hi=80;x.clearRect(0,0,c.width,c.height);x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.strokeStyle='#e1e7f0';x.lineWidth=1;for(let i=60;i<c.width-30;i+=60){x.beginPath();x.moveTo(i,36);x.lineTo(i,250);x.stroke()}const isD=isDigital(),w=60+Math.min(d,100)*6.6;x.strokeStyle=isD?'#0f9f6e':(isPulse()?'#bd7417':'#2563eb');x.lineWidth=6;x.lineJoin='round';x.beginPath();x.moveTo(70,base);x.lineTo(70,hi);x.lineTo(70+w,hi);x.lineTo(70+w,base);x.lineTo(830,base);x.stroke();x.fillStyle='#20242a';x.font='22px sans-serif';x.fillText((isD?p.toUpperCase():(isPulse()?'脉宽: ':'PWM: ')+f+'Hz')+' / '+(isPulse()?pulse.toFixed(0)+'us':d.toFixed(1)+'%'),60,42);x.font='16px sans-serif';x.fillStyle='#69717d';if(isD){const baud=p.replace('dshot','');x.fillText('DShot'+baud+'，油门值 '+dshotThrottle(dutyInput),60,280);$('periodLabel').textContent='协议速率';$('pulseLabel').textContent='DShot 油门';$('period').textContent=baud+'k';$('pulse').textContent=dshotThrottle(dutyInput)}else{x.fillText('周期 '+(period/1000).toFixed(2)+'ms，高电平 '+pulse.toFixed(0)+'us，占空比 '+d.toFixed(2)+'%',60,280);$('periodLabel').textContent='周期';$('pulseLabel').textContent='高电平脉宽';$('period').textContent=(period/1000).toFixed(2)+'ms';$('pulse').textContent=pulse.toFixed(0)+'us'}$('freqRow').className=isD?'disabled':'';$('dutyRow').className=isPulse()?'disabled':'';$('pulseRow').className=isPulse()?'':'disabled'}"
 "async function api(path){const r=await fetch(path);if(!r.ok)throw new Error(await r.text());return r.json()}"
-"function applyState(s){$('protocol').value=s.protocol;$('gpio').value=s.gpio;$('freq').value=s.frequency_hz;$('freqRange').value=s.frequency_hz;$('duty').value=(s.duty_tenths/10).toFixed(1);$('dutyRange').value=(s.duty_tenths/10).toFixed(1);$('ip').textContent=s.ip;$('enabled').textContent=s.enabled?'已解锁':'已锁定';$('enabled').className=s.enabled?'ok':'locked';draw()}"
+"function applyState(s){const pulse=s.configured_pulse_width_us||1000;$('protocol').value=s.protocol;$('gpio').value=s.gpio;$('freq').value=s.frequency_hz;$('freqRange').value=s.frequency_hz;$('duty').value=(s.duty_tenths/10).toFixed(1);$('dutyRange').value=(s.duty_tenths/10).toFixed(1);$('pulseWidth').value=pulse;$('pulseRange').value=pulse;$('ip').textContent=s.ip;$('enabled').textContent=s.enabled?'已解锁':'已锁定';$('enabled').className=s.enabled?'ok':'locked';draw()}"
 "async function refresh(){try{applyState(await api('/api/state'));setStatus('状态已同步')}catch(e){setStatus('读取失败: '+e.message,true)}}"
 "let liveTimer=0,liveBusy=false,livePending=false;"
-"function buildSetQuery(save){return new URLSearchParams({protocol:$('protocol').value,gpio:$('gpio').value,frequency:$('freq').value,duty:$('duty').value,save:save?'1':'0'})}"
+"function buildSetQuery(save){return new URLSearchParams({protocol:$('protocol').value,gpio:$('gpio').value,frequency:$('freq').value,duty:$('duty').value,pulse_width:$('pulseWidth').value,save:save?'1':'0'})}"
 "async function sendLive(){if(liveBusy){livePending=true;return}liveBusy=true;try{const s=await api('/api/set?'+buildSetQuery(false));$('enabled').textContent=s.enabled?'已解锁':'已锁定';$('enabled').className=s.enabled?'ok':'locked';setStatus(s.enabled?'实时输出已更新':'参数已更新，当前仍锁定')}catch(e){setStatus('实时更新失败: '+e.message,true)}finally{liveBusy=false;if(livePending){livePending=false;sendLive()}}}"
-"function scheduleLive(){clearTimeout(liveTimer);liveTimer=setTimeout(sendLive,45)}"
+"function scheduleLive(){clearTimeout(liveTimer);liveTimer=setTimeout(sendLive,5)}"
+"function resetThrottleControls(){$('duty').value='0.0';$('dutyRange').value='0';$('pulseWidth').value='1000';$('pulseRange').value='1000'}"
+"async function protocolChanged(){clearTimeout(liveTimer);livePending=false;resetThrottleControls();draw();try{await api('/api/stop');applyState(await api('/api/set?'+buildSetQuery(false)));setStatus('协议已切换，输出已 STOP 并锁定')}catch(e){setStatus('协议切换失败: '+e.message,true)}}"
 "async function save(){try{applyState(await api('/api/set?'+buildSetQuery(true)));setStatus('设置已保存到 NVS')}catch(e){setStatus('保存失败: '+e.message,true)}}"
 "async function enable(v){try{applyState(await api('/api/enable?value='+(v?1:0)));setStatus(v?'已解锁输出':'已锁定输出')}catch(e){setStatus('操作失败: '+e.message,true)}}"
 "async function stop(){try{applyState(await api('/api/stop'));setStatus('STOP 已执行，输出锁定')}catch(e){setStatus('STOP 失败: '+e.message,true)}}"
-"$('save').onclick=save;$('enable').onclick=()=>enable(true);$('lock').onclick=()=>enable(false);$('stop').onclick=stop;fields.forEach(id=>$(id).addEventListener('input',()=>{draw();scheduleLive()}));refresh();"
+"$('save').onclick=save;$('enable').onclick=()=>enable(true);$('lock').onclick=()=>enable(false);$('stop').onclick=stop;$('protocol').addEventListener('change',protocolChanged);fields.forEach(id=>$(id).addEventListener('input',()=>{draw();scheduleLive()}));refresh();"
 "</script></body></html>";
 
 static esp_err_t send_json_state(httpd_req_t *req)
 {
     const esc_pwm_config_t *config = esc_pwm_get_config();
-    char json[256];
+    char json[320];
     snprintf(json, sizeof(json),
              "{\"protocol\":\"%s\",\"gpio\":%d,\"frequency_hz\":%" PRIu32
              ",\"duty_tenths\":%u,\"pulse_width_us\":%" PRIu32
+             ",\"configured_pulse_width_us\":%u"
              ",\"dshot_throttle\":%u"
              ",\"enabled\":%s,\"ip\":\"%s\"}",
              esc_pwm_protocol_to_string(config->protocol),
              config->gpio_num, config->frequency_hz, config->duty_tenths,
-             esc_pwm_get_pulse_width_us(), esc_pwm_get_dshot_throttle(),
+             esc_pwm_get_pulse_width_us(), config->pulse_width_us, esc_pwm_get_dshot_throttle(),
              esc_pwm_is_enabled() ? "true" : "false",
              get_wifi_ip_address());
     httpd_resp_set_type(req, "application/json");
@@ -110,6 +116,7 @@ static esp_err_t set_handler(httpd_req_t *req)
     gpio_num_t gpio_num = current->gpio_num;
     uint32_t frequency_hz = current->frequency_hz;
     uint16_t duty_tenths = current->duty_tenths;
+    uint16_t pulse_width_us = current->pulse_width_us;
 
     if (get_query_value(req, "protocol", value, sizeof(value)) &&
         !esc_pwm_protocol_from_string(value, &protocol)) {
@@ -132,13 +139,16 @@ static esp_err_t set_handler(httpd_req_t *req)
         }
         duty_tenths = (uint16_t)(duty_percent * 10.0f + 0.5f);
     }
+    if (get_query_value(req, "pulse_width", value, sizeof(value))) {
+        pulse_width_us = (uint16_t)atoi(value);
+    }
 
     bool save = true;
     if (get_query_value(req, "save", value, sizeof(value))) {
         save = atoi(value) != 0;
     }
 
-    esp_err_t err = esc_pwm_set_config(protocol, gpio_num, frequency_hz, duty_tenths, save);
+    esp_err_t err = esc_pwm_set_config(protocol, gpio_num, frequency_hz, duty_tenths, pulse_width_us, save);
     if (err != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid ESC settings");
         return err;

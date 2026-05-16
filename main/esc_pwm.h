@@ -11,6 +11,9 @@
 #define ESC_PWM_MAX_FREQ_HZ 1000
 #define ESC_PWM_DEFAULT_FREQ_HZ 50
 #define ESC_PWM_DEFAULT_DUTY_TENTHS 50
+#define ESC_PWM_MIN_PULSE_WIDTH_US 1000
+#define ESC_PWM_MAX_PULSE_WIDTH_US 2000
+#define ESC_PWM_DEFAULT_PULSE_WIDTH_US 1000
 #define ESC_PWM_DEFAULT_GPIO GPIO_NUM_3
 
 typedef enum {
@@ -19,6 +22,7 @@ typedef enum {
     ESC_PROTOCOL_DSHOT300,
     ESC_PROTOCOL_DSHOT600,
     ESC_PROTOCOL_DSHOT1200,
+    ESC_PROTOCOL_PULSE_WIDTH,
 } esc_protocol_t;
 
 typedef struct {
@@ -26,11 +30,13 @@ typedef struct {
     gpio_num_t gpio_num;
     uint32_t frequency_hz;
     uint16_t duty_tenths;
+    uint16_t pulse_width_us;
 } esc_pwm_config_t;
 
 esp_err_t esc_pwm_init(void);
 esp_err_t esc_pwm_set_config(esc_protocol_t protocol, gpio_num_t gpio_num,
                              uint32_t frequency_hz, uint16_t duty_tenths,
+                             uint16_t pulse_width_us,
                              bool save);
 esp_err_t esc_pwm_set_enabled(bool enabled);
 esp_err_t esc_pwm_stop(void);
