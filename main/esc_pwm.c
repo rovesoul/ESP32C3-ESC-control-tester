@@ -481,6 +481,7 @@ esp_err_t esc_pwm_set_enabled(bool enabled)
 esp_err_t esc_pwm_stop(void)
 {
     s_enabled = false;
+    s_config.duty_tenths = 0;
     return apply_output_duty();
 }
 
