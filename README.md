@@ -103,3 +103,7 @@ IDF_COMPONENT_MANAGER=0 idf.py -p PORT flash monitor
 ## 接线图
 默认用 gpio3 ，接线图如下，买的各类 esp32c3 开发板都可以。
 ![](接线图.png)
+
+
+## 视频
+[用ESP32C3做一个网页上设置的电调驱动器（idf 开发）](https://www.bilibili.com/video/BV1m7Ln6LEbE/?share_source=copy_web&vd_source=315a22798fe1704a16ab3221f825b1cc)
